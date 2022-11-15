@@ -20,6 +20,7 @@ FetchContent_MakeAvailable(googletest)
 # IMPORT SOURCE FILES FOR STATIC LIBRARY
 add_subdirectory(src/mylib)
 add_subdirectory(src/math)
+add_subdirectory(src/leetcode)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR}/cmake)
 include(import_library)
