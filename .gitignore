@@ -3,7 +3,7 @@
 .vs
 
 # build folder
-*build/*
+*build*/*
 
 # Node artifact files
 node_modules/
