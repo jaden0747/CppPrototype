@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.10)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 project(cpp_protopyte)
 set(CMAKE_CXX_STANDARD 11)
@@ -25,10 +25,6 @@ add_subdirectory(src/leetcode)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR}/cmake)
 include(import_library)
 
-# OpenCV
-find_package(OpenCV CONFIG REQUIRED)
-import_library(OpenCV_INCLUDE_DIR OpenCV_LIBRARIES)
-
 # Qt
 # set(CMAKE_AUTOUIC ON)
 # set(CMAKE_AUTOMOC ON)
@@ -38,7 +34,7 @@ import_library(OpenCV_INCLUDE_DIR OpenCV_LIBRARIES)
 # find_package(QT${QT_VERSION_MAJOR} COMPONENTS Core REQUIRED)
 # qt_standard_project_setup()
 
-add_library(${PROJECT_NAME} STATIC ${PROJECT_SOURCES})
+add_library(${PROJECT_NAME} SHARED ${PROJECT_SOURCES})
 target_include_directories(${PROJECT_NAME} PUBLIC ${PROJECT_INCLUDE_DIRS} ${CONAN_INCLUDE_DIRS})
 target_link_libraries(${PROJECT_NAME} ${PROJECT_LIBRARIES})
 

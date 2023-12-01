@@ -1,5 +1,3 @@
-cmake_minimum_required(VERSION 3.0)
-
 file(GLOB_RECURSE SOURCES 
   ${CMAKE_CURRENT_SOURCE_DIR}/src/*.c 
   ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp
