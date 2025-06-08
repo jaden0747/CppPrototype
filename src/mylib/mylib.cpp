@@ -1,4 +1,4 @@
-#include "mylib/mylib.h"
+#include "mylib/mylib.hpp"
 
 const std::string Greeting::getMessage() const
 {

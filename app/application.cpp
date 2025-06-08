@@ -1,6 +1,6 @@
 #include <iostream>
 
-#include "mylib/mylib.h"
+#include "mylib/mylib.hpp"
 
 int main(int argc, char** argv)
 {
