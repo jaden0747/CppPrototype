@@ -3,27 +3,8 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 project(cpp_protopyte)
 set(CMAKE_CXX_STANDARD 11)
 
-# # CONAN
-# include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
-# conan_basic_setup()
-
-
-# GOOGLETEST 
-include(FetchContent)
-FetchContent_Declare(
-  googletest
-  URL https://github.com/google/googletest/archive/03597a01ee50ed33e9dfd640b249b4be3799d395.zip
-)
-set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
-FetchContent_MakeAvailable(googletest)
-
 # IMPORT SOURCE FILES FOR STATIC LIBRARY
 add_subdirectory(src/mylib)
-add_subdirectory(src/math)
-add_subdirectory(src/leetcode)
-
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR}/cmake)
-include(import_library)
 
 # Qt
 # set(CMAKE_AUTOUIC ON)
@@ -33,20 +14,20 @@ include(import_library)
 # find_package(QT NAMES Qt6 Qt5 COMPONENTS Core REQUIRED)
 # find_package(QT${QT_VERSION_MAJOR} COMPONENTS Core REQUIRED)
 # qt_standard_project_setup()
+# set(BUILD_SHARED_LIBS ON)
 
-add_library(${PROJECT_NAME} SHARED ${PROJECT_SOURCES})
-target_include_directories(${PROJECT_NAME} PUBLIC ${PROJECT_INCLUDE_DIRS} ${CONAN_INCLUDE_DIRS})
+add_library(${PROJECT_NAME} STATIC ${PROJECT_SOURCES})
+target_compile_definitions(${PROJECT_NAME} PRIVATE BUILDING_DLL)
+target_include_directories(${PROJECT_NAME} PRIVATE ${PROJECT_INCLUDE_DIRS})
 target_link_libraries(${PROJECT_NAME} ${PROJECT_LIBRARIES})
 
 add_executable(Application app/application.cpp)
-target_include_directories(Application PUBLIC ${PROJECT_INCLUDE_DIRS} ${CONAN_INCLUDE_DIRS})
-target_link_libraries(Application ${PROJECT_NAME} ${CONAN_LIBS})
+target_include_directories(Application PUBLIC ${PROJECT_INCLUDE_DIRS})
+target_link_libraries(Application PRIVATE ${PROJECT_NAME})
 
+
+find_package(GTest REQUIRED)
 enable_testing()
-
 add_executable(Test test/test.cpp)
-target_include_directories(Test PUBLIC ${PROJECT_INCLUDE_DIRS} ${CONAN_INCLUDE_DIRS})
-target_link_libraries(Test GTest::gtest_main ${PROJECT_NAME} ${CONAN_LIBS})
-
-include(GoogleTest)
-gtest_discover_tests(Test)
+target_include_directories(Test PUBLIC ${PROJECT_INCLUDE_DIRS} ${GTest_INCLUDE_DIR})
+target_link_libraries(Test PUBLIC ${GTest_LIBRARIES} ${PROJECT_NAME} ${CONAN_LIBS})

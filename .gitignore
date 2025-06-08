@@ -52,3 +52,6 @@ Thumbs.db
 
 # books
 thirdparty/*
+
+# CMAKE generated files
+CMakeUserPresets.json
