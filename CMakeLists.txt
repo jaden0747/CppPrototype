@@ -6,6 +6,8 @@ set(CMAKE_CXX_STANDARD 11)
 # IMPORT SOURCE FILES FOR STATIC LIBRARY
 add_subdirectory(src/mylib)
 
+include_directories(${PROJECT_SOURCE_DIR}/include)
+
 # Qt
 # set(CMAKE_AUTOUIC ON)
 # set(CMAKE_AUTOMOC ON)

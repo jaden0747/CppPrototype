@@ -11,15 +11,9 @@ public:
     {
     }
 
-    const std::string getMessage() const
-    {
-        return m_message;
-    }
+    const std::string getMessage() const;
 
-    void greeting() const
-    {
-        std::cout << m_message << std::endl;
-    }
+    void greeting() const;
 
 private:
     std::string m_message;
