@@ -1,11 +1,19 @@
 #include "mylib/mylib.hpp"
+#include "mylib/customscene.h"
+#include "scene.h"
+#include "scenerunner.h"
 
-const std::string Greeting::getMessage() const
+void Main::run()
 {
-    return m_message;
-}
+    SceneRunner runner("OpenGL Cookbook", 1280, 720);
 
-void Greeting::greeting() const
-{
-    std::cout << m_message << std::endl;
+    std::unique_ptr<Scene> scene;
+    scene = std::unique_ptr<Scene>(new CustomScene());
+
+    if (!runner.run(std::move(scene)))
+    {
+        std::cerr << "SceneRunner failed to run the scene." << std::endl;
+    }
+
+    return;
 }
