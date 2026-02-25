@@ -22,6 +22,15 @@ void ImGuiScene::initScene()
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO();
+    std::string fontPath = "resources/font/ComicMonoNF-Regular.ttf";
+    ImFont* font = io.Fonts->AddFontFromFileTTF(fontPath.c_str(), 36.0f);
+
+    if (font == nullptr)
+    {
+        std::cerr << "Failed to load font: " << fontPath << std::endl;
+        std::exit(EXIT_FAILURE);
+    }
+
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
     io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;

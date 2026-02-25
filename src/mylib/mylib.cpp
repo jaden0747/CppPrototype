@@ -3,9 +3,15 @@
 #include "scene.h"
 #include "scenerunner.h"
 
+#define WIDTH 1920.0f
+#define HEIGHT 1080.0f
+#define SCALE 1.5f
+
 void Main::run()
 {
-    SceneRunner runner("OpenGL Cookbook", 1280, 720);
+    int fbw = static_cast<int>(WIDTH * SCALE);
+    int fbh = static_cast<int>(HEIGHT * SCALE);
+    SceneRunner runner("OpenGL Cookbook", fbw, fbh);
 
     std::unique_ptr<Scene> scene;
     scene = std::unique_ptr<Scene>(new CustomScene());
