@@ -3,6 +3,7 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 project(cpp_protopyte)
 set(CMAKE_CXX_STANDARD 17)
 set(CXX_STANDARD_REQUIRED ON)
+set(CMAKE_BUILD_TYPE DEBUG)
 
 find_package( glm CONFIG REQUIRED )
 find_package( glfw3 CONFIG REQUIRED )

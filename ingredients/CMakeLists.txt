@@ -22,6 +22,12 @@ set(ingredients_SOURCES
 
 add_library(${target} STATIC ${ingredients_SOURCES})
 
+# Detect WSL environment
+if(EXISTS "/proc/sys/fs/binfmt_misc/WSLInterop" OR EXISTS "/run/WSL")
+    message(STATUS "WSL environment detected — OpenGL version capped at 4.3")
+    target_compile_definitions(${target} PUBLIC __WSL__)
+endif()
+
 target_include_directories(${target} PUBLIC glad/include)
 
 target_link_libraries(${target}
