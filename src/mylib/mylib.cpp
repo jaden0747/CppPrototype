@@ -23,3 +23,8 @@ void Main::run()
 
     return;
 }
+
+int Main::add(int a, int b)
+{
+    return a + b;
+}

@@ -7,4 +7,6 @@ class Main
 {
 public:
     static void run();
+
+    static int add(int a, int b);
 };

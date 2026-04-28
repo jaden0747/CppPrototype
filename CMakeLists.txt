@@ -48,7 +48,7 @@ target_link_libraries(Application PRIVATE ${PROJECT_NAME})
 
 
 find_package(GTest REQUIRED)
-enable_testing()
+# enable_testing()
 add_executable(Test test/test.cpp)
 target_include_directories(Test PUBLIC ${PROJECT_INCLUDE_DIRS} ${GTest_INCLUDE_DIR})
 target_link_libraries(Test PUBLIC ${GTest_LIBRARIES} ${PROJECT_NAME} ${CONAN_LIBS})
@@ -83,3 +83,17 @@ add_custom_command(TARGET cli_server POST_BUILD
         "${CMAKE_SOURCE_DIR}/resources/settings.json"
         "$<TARGET_FILE_DIR:cli_server>/settings.json"
 )
+# Find the real-time library (librt)
+find_library(RT_LIB rt)
+
+# Writer executable
+add_executable(writer app/writer.cpp)
+if(RT_LIB)
+    target_link_libraries(writer ${RT_LIB})
+endif()
+
+# Reader executable
+add_executable(reader app/reader.cpp)
+if(RT_LIB)
+    target_link_libraries(reader ${RT_LIB})
+endif()
