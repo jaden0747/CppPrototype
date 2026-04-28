@@ -7,6 +7,9 @@ set(CXX_STANDARD_REQUIRED ON)
 find_package( glm CONFIG REQUIRED )
 find_package( glfw3 CONFIG REQUIRED )
 find_package( OpenGL REQUIRED )
+find_package( nlohmann_json CONFIG REQUIRED )
+find_package( cli CONFIG REQUIRED )
+find_package( asio CONFIG REQUIRED )
 
 set(IMGUI_LIB imgui)
 set(IMGUI_DIR ${CMAKE_CURRENT_SOURCE_DIR}/external/imgui)
@@ -49,3 +52,34 @@ enable_testing()
 add_executable(Test test/test.cpp)
 target_include_directories(Test PUBLIC ${PROJECT_INCLUDE_DIRS} ${GTest_INCLUDE_DIR})
 target_link_libraries(Test PUBLIC ${GTest_LIBRARIES} ${PROJECT_NAME} ${CONAN_LIBS})
+
+# ---------------------------------------------------------------------------
+# settings_demo — coding module migration demo (no networking)
+# ---------------------------------------------------------------------------
+add_executable(settings_demo
+    src/settings_demo/settings_demo_main.cpp
+)
+target_link_libraries(settings_demo PRIVATE nlohmann_json::nlohmann_json)
+add_custom_command(TARGET settings_demo POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${CMAKE_SOURCE_DIR}/resources/settings.json"
+        "$<TARGET_FILE_DIR:settings_demo>/settings.json"
+)
+
+# ---------------------------------------------------------------------------
+# cli_server — telnet CLI server (coding module + daniele77/cli + asio)
+# ---------------------------------------------------------------------------
+add_executable(cli_server
+    src/settings_demo/cli_server_main.cpp
+)
+target_compile_definitions(cli_server PRIVATE WIN32_LEAN_AND_MEAN ASIO_STANDALONE)
+target_link_libraries(cli_server PRIVATE
+    nlohmann_json::nlohmann_json
+    cli::cli
+    asio::asio
+)
+add_custom_command(TARGET cli_server POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${CMAKE_SOURCE_DIR}/resources/settings.json"
+        "$<TARGET_FILE_DIR:cli_server>/settings.json"
+)

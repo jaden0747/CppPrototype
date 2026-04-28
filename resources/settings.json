@@ -1,0 +1,26 @@
+{
+    // AppConfig — overrides flat scalar defaults from AppConfig constructor
+    "AppConfig": {
+        "appName": "RegistryDemo",
+        "windowWidth": 1920,
+        "windowHeight": 1080,
+        "fullscreen": false,
+        "targetFps": 120.0
+    },
+    // RenderSettings — inherits DirtyTracker; dirty() fires on every load
+    "RenderSettings": {
+        "clearColor": [0.2, 0.2, 0.25, 1.0],
+        "wireframe": false,
+        "shadowQuality": "high",
+        "maxLights": 16
+    },
+    // NetworkConfig — demonstrates nested sub-object (EndpointInfo)
+    "NetworkConfig": {
+        "endpoint": {
+            "host": "192.168.1.100",
+            "port": 9090
+        },
+        "timeoutMs": 3000,
+        "enableTLS": true
+    }
+}
