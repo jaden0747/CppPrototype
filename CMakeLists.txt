@@ -83,17 +83,18 @@ add_custom_command(TARGET cli_server POST_BUILD
         "${CMAKE_SOURCE_DIR}/resources/settings.json"
         "$<TARGET_FILE_DIR:cli_server>/settings.json"
 )
-# Find the real-time library (librt)
-find_library(RT_LIB rt)
 
-# Writer executable
-add_executable(writer app/writer.cpp)
-if(RT_LIB)
-    target_link_libraries(writer ${RT_LIB})
-endif()
+# # Find the real-time library (librt)
+# find_library(RT_LIB rt)
 
-# Reader executable
-add_executable(reader app/reader.cpp)
-if(RT_LIB)
-    target_link_libraries(reader ${RT_LIB})
-endif()
+# # Writer executable
+# add_executable(writer app/writer.cpp)
+# if(RT_LIB)
+#     target_link_libraries(writer ${RT_LIB})
+# endif()
+
+# # Reader executable
+# add_executable(reader app/reader.cpp)
+# if(RT_LIB)
+#     target_link_libraries(reader ${RT_LIB})
+# endif()

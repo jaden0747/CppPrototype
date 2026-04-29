@@ -132,20 +132,20 @@ Each top-level key matches a registered item name. Only the fields you want to o
 
 ```json
 {
-    "AppConfig": {
-        "appName": "RegistryDemo",
-        "windowWidth": 1920,
-        "fullscreen": false
-    },
-    "RenderSettings": {
-        "shadowQuality": "high",
-        "maxLights": 16
-    },
-    "NetworkConfig": {
-        "endpoint": { "host": "192.168.1.100", "port": 9090 },
-        "timeoutMs": 3000,
-        "enableTLS": true
-    }
+  "AppConfig": {
+    "appName": "RegistryDemo",
+    "windowWidth": 1920,
+    "fullscreen": false
+  },
+  "RenderSettings": {
+    "shadowQuality": "high",
+    "maxLights": 16
+  },
+  "NetworkConfig": {
+    "endpoint": { "host": "192.168.1.100", "port": 9090 },
+    "timeoutMs": 3000,
+    "enableTLS": true
+  }
 }
 ```
 
@@ -181,17 +181,17 @@ python test/test_client.py
 
 ### Available commands
 
-| Command | Description |
-|---|---|
-| `coding list` | List all registered item keys |
-| `coding list <item>` | List the member names of one item |
-| `coding get` | Dump all items as formatted JSON |
-| `coding get <item>` | Dump one item as formatted JSON |
+| Command                              | Description                                   |
+| ------------------------------------ | --------------------------------------------- |
+| `coding list`                        | List all registered item keys                 |
+| `coding list <item>`                 | List the member names of one item             |
+| `coding get`                         | Dump all items as formatted JSON              |
+| `coding get <item>`                  | Dump one item as formatted JSON               |
 | `coding set <item> <member> <value>` | Set a member (value is JSON or a bare string) |
-| `coding export <file>` | Write all items to a JSON file |
-| `save <file>` | Alias for `coding export` |
-| `status` | Print all registered item keys |
-| `echo <message>` | Echo a string back |
+| `coding export <file>`               | Write all items to a JSON file                |
+| `save <file>`                        | Alias for `coding export`                     |
+| `status`                             | Print all registered item keys                |
+| `echo <message>`                     | Echo a string back                            |
 
 Example session:
 
