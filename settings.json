@@ -1,0 +1,12 @@
+{
+    // AppConfig — overrides flat scalar defaults from AppConfig constructor
+    "AppConfig": {
+        "appName": "RegistryDemo",
+        "windowWidth": 600,
+        "windowHeight": 600
+    },
+    "SceneConfig": {
+        "clearColor": [0.1, 0.5, 0.1, 1.0]
+    }
+}
+

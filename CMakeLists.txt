@@ -33,6 +33,7 @@ endif()
 
 # IMPORT SOURCE FILES FOR STATIC LIBRARY
 add_subdirectory(src/mylib)
+add_subdirectory(src/pattern)
 add_subdirectory(ingredients)
 include_directories(ingredients)
 include_directories(${PROJECT_SOURCE_DIR}/include)
@@ -40,7 +41,7 @@ include_directories(${PROJECT_SOURCE_DIR}/include)
 add_library(${PROJECT_NAME} STATIC ${PROJECT_SOURCES})
 target_compile_definitions(${PROJECT_NAME} PRIVATE BUILDING_DLL)
 target_include_directories(${PROJECT_NAME} PRIVATE ${PROJECT_INCLUDE_DIRS} ingredients)
-target_link_libraries(${PROJECT_NAME} ${PROJECT_LIBRARIES} glfw OpenGL::GL glm::glm ${IMGUI_LIB} ingredients)
+target_link_libraries(${PROJECT_NAME} ${PROJECT_LIBRARIES} glfw OpenGL::GL glm::glm ${IMGUI_LIB} ingredients nlohmann_json::nlohmann_json)
 
 add_executable(Application app/application.cpp)
 target_include_directories(Application PUBLIC ${PROJECT_INCLUDE_DIRS})
@@ -49,7 +50,9 @@ target_link_libraries(Application PRIVATE ${PROJECT_NAME})
 
 find_package(GTest REQUIRED)
 # enable_testing()
-add_executable(Test test/test.cpp)
+add_executable(Test
+    test/test.cpp
+)
 target_include_directories(Test PUBLIC ${PROJECT_INCLUDE_DIRS} ${GTest_INCLUDE_DIR})
 target_link_libraries(Test PUBLIC ${GTest_LIBRARIES} ${PROJECT_NAME} ${CONAN_LIBS})
 
@@ -98,3 +101,10 @@ add_custom_command(TARGET cli_server POST_BUILD
 # if(RT_LIB)
 #     target_link_libraries(reader ${RT_LIB})
 # endif()
+
+# ---------------------------------------------------------------------------
+# Lectures — C++ Mastery Series
+# ---------------------------------------------------------------------------
+add_subdirectory(lectures/cpp_std)
+add_subdirectory(lectures/template)
+add_subdirectory(lectures/stdlib)

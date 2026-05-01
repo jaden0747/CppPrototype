@@ -1,6 +1,10 @@
 # vscode
 .vscode
 .vs
+.cache
+
+# ide
+compile_commands.json
 
 # build folder
 *build*/*
