@@ -17,13 +17,29 @@
 #include <string>
 #include <vector>
 
+#include "settings/dirty_tracker.hpp"
+#include "settings/settings_item.hpp"
+
+struct ImGuiSettings : DirtyTracker
+{
+    std::string fontPath{"resources/font/ComicMonoNF-Regular.ttf"};
+    float      fontSize{36.0f};
+    NLOHMANN_DEFINE_TYPE_INTRUSIVE(ImGuiSettings, fontPath, fontSize)
+protected:
+    void onChanged() override
+    {
+        std::cout << "ImGuiSettings changed: fontPath=" << fontPath << ", fontSize=" << fontSize << std::endl;
+    }
+};
+SettingsItem<ImGuiSettings> g_ImGuiSettings("ImGuiSettings");
+
 void ImGuiScene::initScene()
 {
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO();
-    std::string fontPath = "resources/font/ComicMonoNF-Regular.ttf";
-    ImFont* font = io.Fonts->AddFontFromFileTTF(fontPath.c_str(), 36.0f);
+    std::string fontPath = g_ImGuiSettings->fontPath;
+    ImFont* font = io.Fonts->AddFontFromFileTTF(fontPath.c_str(), g_ImGuiSettings->fontSize);
 
     if (font == nullptr)
     {
@@ -86,6 +102,8 @@ void ImGuiScene::render()
     ImGui::End();
     if (showDemo)
         ImGui::ShowDemoWindow(&showDemo);
+
+    renderImGuiWidgets();
 
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());

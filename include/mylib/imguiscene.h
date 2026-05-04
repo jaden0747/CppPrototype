@@ -14,6 +14,9 @@ public:
     // void update(float t) override;
     void render() override;
     // void resize(int, int) override;
+
+    // Called inside the ImGui frame, before Render(). Override in subclasses to add widgets.
+    virtual void renderImGuiWidgets() {}
 };
 
 #endif // IMGUI_SCENE_H

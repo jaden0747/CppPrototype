@@ -1,15 +1,9 @@
 #include "mylib/customscene.h"
 
 #include <cstdio>
-#include <cstdlib>
-
-#include <fstream>
-#include <iostream>
-#include <sstream>
+#include <signal.h>
 #include <string>
 using std::string;
-#include <iterator>
-#include <vector>
 
 #include "glutils.h"
 
@@ -18,135 +12,67 @@ using std::string;
 #include <backends/imgui_impl_opengl3.h>
 #include <imgui.h>
 
-CustomScene::CustomScene()
+CustomScene::CustomScene() = default;
+
+CustomScene::~CustomScene()
 {
+    // Order matters:
+    //   1. Close read end first — producer gets EPIPE on its next write and exits.
+    //   2. Stop producer — stop() notifies the sleep cv; thread exits almost immediately.
+    //   3. Destroy channel — unlinks the FIFO.
+    m_consumer.reset();
+    m_producer.reset();
+    m_channel.destroy();
 }
 
 void CustomScene::initScene()
 {
     ImGuiScene::initScene();
-    compileShaderProgram();
 
-    // clang-format off
-    float vertices[] = {
-        -0.5f, -0.5f, 0.0f,
-        0.5f, -0.5f, 0.0f,
-        0.0f,  0.5f, 0.0f
-    };
-    // clang-format on
+    // Ignore SIGPIPE process-wide so write() returns -1/EPIPE instead of
+    // killing the process when the read end is closed.
+    signal(SIGPIPE, SIG_IGN);
 
-    glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+    m_channel.create();
 
-    GLuint vbo;
-    glGenVertexArrays(1, &vaoHandle);
-    glBindVertexArray(vaoHandle);
+    // Consumer opens first (non-blocking) so the producer's openWriter() returns
+    // immediately rather than blocking indefinitely.
+    m_consumer = std::make_unique<Consumer>(m_channel);
+    m_consumer->open();
 
-    glGenBuffers(1, &vbo);
-    glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-
-    glBindVertexArray(0);
+    m_producer = std::make_unique<Producer>(m_channel, Producer::sensorSource());
+    m_producer->start();
 }
 
-void CustomScene::compileShaderProgram()
+void CustomScene::renderImGuiWidgets()
 {
-    const char* vertSrc = R"GLSL(
-        #version 330 core
-        layout(location = 0) in vec3 aPos;
-        void main() {
-            gl_Position = vec4(aPos, 1.0);
-        }
-    )GLSL";
-
-    const char* fragSrc = R"GLSL(
-        #version 330 core
-        out vec4 FragColor;
-        void main() {
-            FragColor = vec4(1.0, 0.5, 0.2, 1.0);
-        }
-    )GLSL";
-
-    GLuint vertShader = glCreateShader(GL_VERTEX_SHADER);
-    glShaderSource(vertShader, 1, &vertSrc, nullptr);
-    glCompileShader(vertShader);
-    GLint status = GL_FALSE;
-    glGetShaderiv(vertShader, GL_COMPILE_STATUS, &status);
-    if (status != GL_TRUE)
+    for (auto& line : m_consumer->drain())
     {
-        std::string log = getShaderInfoLog(vertShader);
-        printf("Vertex shader compile error:\n%s\n", log.c_str());
+        m_messages.push_back(std::move(line));
+        if (static_cast<int>(m_messages.size()) > MAX_MESSAGES)
+            m_messages.pop_front();
     }
 
-    GLuint fragShader = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(fragShader, 1, &fragSrc, nullptr);
-    glCompileShader(fragShader);
-    glGetShaderiv(fragShader, GL_COMPILE_STATUS, &status);
-    if (status != GL_TRUE)
-    {
-        std::string log = getShaderInfoLog(fragShader);
-        printf("Fragment shader compile error:\n%s\n", log.c_str());
-    }
+    ImGui::Begin("FIFO Logger");
+    ImGui::Text("Messages: %zu / %d", m_messages.size(), MAX_MESSAGES);
+    ImGui::SameLine();
+    if (ImGui::Button("Clear"))
+        m_messages.clear();
+    ImGui::Separator();
 
-    linkMe(vertShader, fragShader);
+    ImGui::BeginChild("log_scroll", ImVec2(0, 0), false, ImGuiWindowFlags_HorizontalScrollbar);
+    for (const auto& msg : m_messages)
+        ImGui::TextUnformatted(msg.c_str());
+    if (ImGui::GetScrollY() >= ImGui::GetScrollMaxY())
+        ImGui::SetScrollHereY(1.0f);
+    ImGui::EndChild();
 
-    glDeleteShader(vertShader);
-    glDeleteShader(fragShader);
-}
-
-void CustomScene::linkMe(GLint vertShader, GLint fragShader)
-{
-    programHandle = glCreateProgram();
-    glAttachShader(programHandle, vertShader);
-    glAttachShader(programHandle, fragShader);
-    glLinkProgram(programHandle);
-
-    GLint status = GL_FALSE;
-    glGetProgramiv(programHandle, GL_LINK_STATUS, &status);
-    if (status != GL_TRUE)
-    {
-        std::string log = getProgramInfoLog(programHandle);
-        printf("Program link error:\n%s\n", log.c_str());
-        glDeleteProgram(programHandle);
-        programHandle = 0;
-    }
-}
-
-std::string CustomScene::getShaderInfoLog(GLuint shader)
-{
-    GLint logLen;
-    glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &logLen);
-
-    std::string log;
-    if (logLen > 0)
-    {
-        log.resize(logLen, ' ');
-        GLsizei written;
-        glGetShaderInfoLog(shader, logLen, &written, &log[0]);
-    }
-
-    return log;
-}
-
-std::string CustomScene::getProgramInfoLog(GLuint program)
-{
-    GLint logLen;
-    glGetProgramiv(program, GL_INFO_LOG_LENGTH, &logLen);
-
-    std::string log;
-    if (logLen > 0)
-    {
-        log.resize(logLen, ' ');
-        GLsizei written;
-        glGetProgramInfoLog(program, logLen, &written, &log[0]);
-    }
-    return log;
+    ImGui::End();
 }
 
 void CustomScene::update(float t)
 {
+    (void)t;
 }
 
 void CustomScene::render()
@@ -168,4 +94,3 @@ void CustomScene::resize(int w, int h)
     height = h;
     glViewport(0, 0, w, h);
 }
-

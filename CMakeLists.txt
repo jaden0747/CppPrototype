@@ -52,6 +52,7 @@ find_package(GTest REQUIRED)
 # enable_testing()
 add_executable(Test
     test/test.cpp
+    test/test_ipc.cpp
 )
 target_include_directories(Test PUBLIC ${PROJECT_INCLUDE_DIRS} ${GTest_INCLUDE_DIR})
 target_link_libraries(Test PUBLIC ${GTest_LIBRARIES} ${PROJECT_NAME} ${CONAN_LIBS})

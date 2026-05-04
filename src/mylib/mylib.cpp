@@ -3,15 +3,16 @@
 #include "scene.h"
 #include "scenerunner.h"
 
-#define WIDTH 1920.0f
-#define HEIGHT 1080.0f
-#define SCALE 1.5f
+SettingsItem<AppSettings> g_AppSettings("AppSettings");
 
 void Main::run()
 {
-    int fbw = static_cast<int>(WIDTH * SCALE);
-    int fbh = static_cast<int>(HEIGHT * SCALE);
-    SceneRunner runner("OpenGL Cookbook", fbw, fbh);
+    // init coding
+
+    auto& reg = SettingsRegistry::instance();
+    reg.loadJson("settings.json");
+
+    SceneRunner runner("OpenGL Cookbook", g_AppSettings->width, g_AppSettings->height);
 
     std::unique_ptr<Scene> scene;
     scene = std::unique_ptr<Scene>(new CustomScene());
@@ -22,9 +23,4 @@ void Main::run()
     }
 
     return;
-}
-
-int Main::add(int a, int b)
-{
-    return a + b;
 }
