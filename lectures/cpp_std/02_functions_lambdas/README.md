@@ -81,15 +81,15 @@ One line, same performance, no boilerplate.
 
 ### Capture modes
 
-| Syntax | Meaning |
-|--------|---------|
-| `[x]` | Capture `x` by value (copy) |
-| `[&x]` | Capture `x` by reference |
-| `[=]` | Capture everything used by value |
-| `[&]` | Capture everything used by reference |
+| Syntax    | Meaning                                      |
+| --------- | -------------------------------------------- |
+| `[x]`     | Capture `x` by value (copy)                  |
+| `[&x]`    | Capture `x` by reference                     |
+| `[=]`     | Capture everything used by value             |
+| `[&]`     | Capture everything used by reference         |
 | `[=, &x]` | Everything by value, except `x` by reference |
-| `[&, x]` | Everything by reference, except `x` by value |
-| `[this]` | Capture the current object's `this` pointer |
+| `[&, x]`  | Everything by reference, except `x` by value |
+| `[this]`  | Capture the current object's `this` pointer  |
 
 ### Lifetime warning
 
@@ -312,12 +312,12 @@ After [even && > 4]: 6 8 10
 
 ## 8. Further Reading & Suggestions
 
-| Topic | Resource |
-|-------|----------|
-| Lambda internals | *C++ Templates: The Complete Guide* ch. 11 |
-| `std::function` overhead | Jason Turner's *C++ Weekly* ep. 144 |
-| Rule of Five | cppreference.com/w/cpp/language/rule_of_three |
-| `= delete` tricks | Abseil Tips #49 |
+| Topic                    | Resource                                      |
+| ------------------------ | --------------------------------------------- |
+| Lambda internals         | *C++ Templates: The Complete Guide* ch. 11    |
+| `std::function` overhead | Jason Turner's *C++ Weekly* ep. 144           |
+| Rule of Five             | cppreference.com/w/cpp/language/rule_of_three |
+| `= delete` tricks        | Abseil Tips #49                               |
 
 **Next lecture:** Move Semantics & Smart Pointers — where we learn why
 `= delete` on copy operations is so common, and how to transfer ownership

@@ -221,12 +221,12 @@ if (auto locked = wp.lock()) {      // try to get shared_ptr
 
 ### When to use what
 
-| Pointer type | Ownership | Copy? | Use case |
-|-------------|-----------|-------|----------|
-| `unique_ptr` | Exclusive | No (move only) | Default choice. Factories, containers. |
-| `shared_ptr` | Shared | Yes | Multiple owners. Caches, graphs. |
-| `weak_ptr` | None (observer) | Yes | Break cycles, optional back-references. |
-| Raw pointer (`T*`) | None (non-owning) | Yes | Function params that don't own. |
+| Pointer type       | Ownership         | Copy?          | Use case                                |
+| ------------------ | ----------------- | -------------- | --------------------------------------- |
+| `unique_ptr`       | Exclusive         | No (move only) | Default choice. Factories, containers.  |
+| `shared_ptr`       | Shared            | Yes            | Multiple owners. Caches, graphs.        |
+| `weak_ptr`         | None (observer)   | Yes            | Break cycles, optional back-references. |
+| Raw pointer (`T*`) | None (non-owning) | Yes            | Function params that don't own.         |
 
 ---
 
