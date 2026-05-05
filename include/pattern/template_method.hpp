@@ -27,7 +27,8 @@
 //  - Several classes contain nearly identical algorithms with minor differences.
 // ---------------------------------------------------------------------------
 
-namespace pattern {
+namespace pattern
+{
 
 // ---------- Abstract class with template method --------------------------
 
@@ -49,14 +50,20 @@ public:
     }
 
     // Accessors for test inspection
-    const std::vector<std::string>& rawLines()    const { return rawLines_; }
-    const std::vector<std::string>& parsedLines() const { return parsedLines_; }
+    const std::vector<std::string>& rawLines() const
+    {
+        return rawLines_;
+    }
+    const std::vector<std::string>& parsedLines() const
+    {
+        return parsedLines_;
+    }
 
 protected:
     // Primitive operations (must override)
     virtual void openFile(const std::string& path) = 0;
-    virtual void extractData() = 0;
-    virtual void parseData() = 0;
+    virtual void extractData()                     = 0;
+    virtual void parseData()                       = 0;
 
     // Hook — concrete behaviour; subclasses may override
     virtual void analyseData()
@@ -64,17 +71,18 @@ protected:
         analysisNote_ = "(default analysis)";
     }
 
-    virtual void closeFile() {}  // optional hook, default no-op
+    virtual void closeFile()
+    {
+    } // optional hook, default no-op
 
     virtual std::string buildReport() const
     {
-        return "Report[" + analysisNote_ + "]: " +
-               std::to_string(parsedLines_.size()) + " records";
+        return "Report[" + analysisNote_ + "]: " + std::to_string(parsedLines_.size()) + " records";
     }
 
     std::vector<std::string> rawLines_;
     std::vector<std::string> parsedLines_;
-    std::string analysisNote_;
+    std::string              analysisNote_;
 };
 
 // ---------- Concrete: CSV miner ------------------------------------------
@@ -89,13 +97,21 @@ protected:
         std::string token;
         for (char c : path)
         {
-            if (c == ';') { rawLines_.push_back(token); token.clear(); }
-            else token += c;
+            if (c == ';')
+            {
+                rawLines_.push_back(token);
+                token.clear();
+            }
+            else
+                token += c;
         }
-        if (!token.empty()) rawLines_.push_back(token);
+        if (!token.empty())
+            rawLines_.push_back(token);
     }
 
-    void extractData() override {} // raw data already in rawLines_
+    void extractData() override
+    {
+    } // raw data already in rawLines_
 
     void parseData() override
     {
@@ -117,10 +133,12 @@ class JsonMiner : public DataMiner
 protected:
     void openFile(const std::string& path) override
     {
-        rawLines_ = {path};  // treat entire string as one "document"
+        rawLines_ = {path}; // treat entire string as one "document"
     }
 
-    void extractData() override {}
+    void extractData() override
+    {
+    }
 
     void parseData() override
     {

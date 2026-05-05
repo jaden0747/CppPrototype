@@ -1,5 +1,5 @@
-#include <gtest/gtest.h>
 #include "pattern/mediator.hpp"
+#include <gtest/gtest.h>
 
 using namespace pattern;
 

@@ -1,5 +1,5 @@
-#include <gtest/gtest.h>
 #include "pattern/proxy.hpp"
+#include <gtest/gtest.h>
 
 using namespace pattern;
 
@@ -71,14 +71,14 @@ TEST(Proxy, GuestCannotDeleteData)
 // ---------------------------------------------------------------------------
 TEST(Proxy, CachingProxyReturnsSameValue)
 {
-    auto slow = std::unique_ptr<SlowDataSource>(new SlowDataSource());
+    auto         slow = std::unique_ptr<SlowDataSource>(new SlowDataSource());
     CachingProxy proxy(std::move(slow));
     EXPECT_EQ("value_of_a", proxy.fetch("a"));
 }
 
 TEST(Proxy, CachingProxyOnlyCallsRealOnce)
 {
-    auto* rawSlow = new SlowDataSource();
+    auto*        rawSlow = new SlowDataSource();
     CachingProxy proxy{std::unique_ptr<DataSource>(rawSlow)};
     proxy.fetch("key1");
     proxy.fetch("key1");
@@ -97,7 +97,7 @@ TEST(Proxy, CachingProxyCacheSizeGrowsForNewKeys)
 
 TEST(Proxy, CachingProxyDifferentKeysFetchedOnce)
 {
-    auto* rawSlow = new SlowDataSource();
+    auto*        rawSlow = new SlowDataSource();
     CachingProxy proxy{std::unique_ptr<DataSource>(rawSlow)};
     proxy.fetch("a");
     proxy.fetch("b");

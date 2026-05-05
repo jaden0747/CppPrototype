@@ -1,5 +1,5 @@
-#include <gtest/gtest.h>
 #include "pattern/builder.hpp"
+#include <gtest/gtest.h>
 
 using namespace pattern;
 
@@ -36,7 +36,7 @@ TEST(Builder, AddMultipleToppings)
     Burger result = b.getResult();
     ASSERT_EQ(2u, result.toppings.size());
     EXPECT_EQ("lettuce", result.toppings[0]);
-    EXPECT_EQ("tomato",  result.toppings[1]);
+    EXPECT_EQ("tomato", result.toppings[1]);
 }
 
 TEST(Builder, ToastedFlag)
@@ -52,24 +52,25 @@ TEST(Builder, ToastedFlag)
 TEST(Builder, DirectorClassicHasCheese)
 {
     MeatBurgerBuilder builder;
-    BurgerDirector director(&builder);
+    BurgerDirector    director(&builder);
     director.buildClassic();
-    Burger result = builder.getResult();
-    bool hasCheese = false;
+    Burger result    = builder.getResult();
+    bool   hasCheese = false;
     for (const auto& t : result.toppings)
-        if (t == "cheese") hasCheese = true;
+        if (t == "cheese")
+            hasCheese = true;
     EXPECT_TRUE(hasCheese);
 }
 
 TEST(Builder, DirectorDeluxeHasMoreToppings)
 {
     MeatBurgerBuilder classic;
-    BurgerDirector d1(&classic);
+    BurgerDirector    d1(&classic);
     d1.buildClassic();
     Burger c = classic.getResult();
 
     MeatBurgerBuilder deluxe;
-    BurgerDirector d2(&deluxe);
+    BurgerDirector    d2(&deluxe);
     d2.buildDeluxe();
     Burger d = deluxe.getResult();
 
@@ -83,7 +84,7 @@ TEST(Builder, BuilderResetsAfterGetResult)
 {
     MeatBurgerBuilder b;
     b.addTopping("onion");
-    b.getResult();          // consume + reset
+    b.getResult(); // consume + reset
     Burger second = b.getResult();
     EXPECT_TRUE(second.toppings.empty());
 }
@@ -93,17 +94,12 @@ TEST(Builder, BuilderResetsAfterGetResult)
 // ---------------------------------------------------------------------------
 TEST(Builder, FluentBuilderSetsAllFields)
 {
-    Burger b = FluentBurger()
-        .withBun("brioche")
-        .withPatty("turkey")
-        .withTopping("avocado")
-        .toasted()
-        .build();
+    Burger b = FluentBurger().withBun("brioche").withPatty("turkey").withTopping("avocado").toasted().build();
 
-    EXPECT_EQ("brioche",  b.bun);
-    EXPECT_EQ("turkey",   b.patty);
-    EXPECT_EQ(1u,         b.toppings.size());
-    EXPECT_EQ("avocado",  b.toppings[0]);
+    EXPECT_EQ("brioche", b.bun);
+    EXPECT_EQ("turkey", b.patty);
+    EXPECT_EQ(1u, b.toppings.size());
+    EXPECT_EQ("avocado", b.toppings[0]);
     EXPECT_TRUE(b.toasted);
 }
 

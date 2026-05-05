@@ -1,5 +1,5 @@
-#include <gtest/gtest.h>
 #include "pattern/observer.hpp"
+#include <gtest/gtest.h>
 
 using namespace pattern;
 
@@ -9,7 +9,7 @@ using namespace pattern;
 TEST(Observer, AttachIncreasesSubscriberCount)
 {
     StockMarket market;
-    Logger logger;
+    Logger      logger;
     market.attach(&logger);
     EXPECT_EQ(1u, market.subscriberCount());
 }
@@ -17,7 +17,7 @@ TEST(Observer, AttachIncreasesSubscriberCount)
 TEST(Observer, DetachDecreasesSubscriberCount)
 {
     StockMarket market;
-    Logger logger;
+    Logger      logger;
     market.attach(&logger);
     market.detach(&logger);
     EXPECT_EQ(0u, market.subscriberCount());
@@ -26,7 +26,7 @@ TEST(Observer, DetachDecreasesSubscriberCount)
 TEST(Observer, LoggerReceivesEvent)
 {
     StockMarket market;
-    Logger logger;
+    Logger      logger;
     market.attach(&logger);
     market.setPrice("AAPL", 150.0);
     ASSERT_EQ(1u, logger.log().size());
@@ -36,7 +36,7 @@ TEST(Observer, LoggerReceivesEvent)
 TEST(Observer, MultipleObserversAllNotified)
 {
     StockMarket market;
-    Logger l1, l2;
+    Logger      l1, l2;
     market.attach(&l1);
     market.attach(&l2);
     market.setPrice("GOOG", 2800.0);
@@ -47,7 +47,7 @@ TEST(Observer, MultipleObserversAllNotified)
 TEST(Observer, DetachedObserverNotNotified)
 {
     StockMarket market;
-    Logger l1, l2;
+    Logger      l1, l2;
     market.attach(&l1);
     market.attach(&l2);
     market.detach(&l2);
@@ -58,7 +58,7 @@ TEST(Observer, DetachedObserverNotNotified)
 
 TEST(Observer, AlertMonitorFiresAboveThreshold)
 {
-    StockMarket market;
+    StockMarket  market;
     AlertMonitor monitor(200.0);
     market.attach(&monitor);
     market.setPrice("TSLA", 250.0);
@@ -67,7 +67,7 @@ TEST(Observer, AlertMonitorFiresAboveThreshold)
 
 TEST(Observer, AlertMonitorSilentBelowThreshold)
 {
-    StockMarket market;
+    StockMarket  market;
     AlertMonitor monitor(200.0);
     market.attach(&monitor);
     market.setPrice("TSLA", 100.0);
@@ -80,8 +80,8 @@ TEST(Observer, AlertMonitorSilentBelowThreshold)
 TEST(Observer, EventEmitterSubscribeAndEmit)
 {
     EventEmitter<int> emitter;
-    int received = -1;
-    emitter.subscribe([&](const int& v){ received = v; });
+    int               received = -1;
+    emitter.subscribe([&](const int& v) { received = v; });
     emitter.emit(42);
     EXPECT_EQ(42, received);
 }
@@ -89,9 +89,9 @@ TEST(Observer, EventEmitterSubscribeAndEmit)
 TEST(Observer, EventEmitterMultipleSubscribers)
 {
     EventEmitter<std::string> emitter;
-    std::vector<std::string> log;
-    emitter.subscribe([&](const std::string& s){ log.push_back("A:" + s); });
-    emitter.subscribe([&](const std::string& s){ log.push_back("B:" + s); });
+    std::vector<std::string>  log;
+    emitter.subscribe([&](const std::string& s) { log.push_back("A:" + s); });
+    emitter.subscribe([&](const std::string& s) { log.push_back("B:" + s); });
     emitter.emit("hello");
     EXPECT_EQ(2u, log.size());
 }
@@ -99,9 +99,9 @@ TEST(Observer, EventEmitterMultipleSubscribers)
 TEST(Observer, EventEmitterUnsubscribe)
 {
     EventEmitter<int> emitter;
-    int countA = 0, countB = 0;
-    emitter.subscribe([&](const int&){ ++countA; });
-    int idB = emitter.subscribe([&](const int&){ ++countB; });
+    int               countA = 0, countB = 0;
+    emitter.subscribe([&](const int&) { ++countA; });
+    int idB = emitter.subscribe([&](const int&) { ++countB; });
     emitter.unsubscribe(idB);
     emitter.emit(1);
     EXPECT_EQ(1, countA);
@@ -111,7 +111,7 @@ TEST(Observer, EventEmitterUnsubscribe)
 TEST(Observer, EventEmitterSubscriberCount)
 {
     EventEmitter<int> emitter;
-    auto id = emitter.subscribe([](const int&){});
+    auto              id = emitter.subscribe([](const int&) {});
     EXPECT_EQ(1u, emitter.subscriberCount());
     emitter.unsubscribe(id);
     EXPECT_EQ(0u, emitter.subscriberCount());

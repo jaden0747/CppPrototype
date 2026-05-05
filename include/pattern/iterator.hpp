@@ -1,8 +1,8 @@
 #pragma once
-#include <vector>
-#include <string>
-#include <stdexcept>
 #include <iterator>
+#include <stdexcept>
+#include <string>
+#include <vector>
 
 // ---------------------------------------------------------------------------
 // Iterator Pattern
@@ -30,27 +30,41 @@
 //  - Multiple iterators over the same collection simultaneously.
 // ---------------------------------------------------------------------------
 
-namespace pattern {
+namespace pattern
+{
 
 // ---------- 1. Custom iterator over a flat list --------------------------
 
 class WordCollection
 {
 public:
-    void add(const std::string& word) { words_.push_back(word); }
-    std::size_t size() const { return words_.size(); }
+    void add(const std::string& word)
+    {
+        words_.push_back(word);
+    }
+    std::size_t size() const
+    {
+        return words_.size();
+    }
 
     // Forward iterator (manual)
     class ForwardIterator
     {
     public:
         explicit ForwardIterator(const WordCollection& col)
-            : col_(col), index_(0) {}
+            : col_(col)
+            , index_(0)
+        {
+        }
 
-        bool        hasNext() const { return index_ < col_.words_.size(); }
+        bool hasNext() const
+        {
+            return index_ < col_.words_.size();
+        }
         const std::string& next()
         {
-            if (!hasNext()) throw std::out_of_range("Iterator exhausted");
+            if (!hasNext())
+                throw std::out_of_range("Iterator exhausted");
             return col_.words_[index_++];
         }
 
@@ -64,12 +78,19 @@ public:
     {
     public:
         explicit ReverseIterator(const WordCollection& col)
-            : col_(col), index_(col.words_.size()) {}
+            : col_(col)
+            , index_(col.words_.size())
+        {
+        }
 
-        bool hasNext() const { return index_ > 0; }
+        bool hasNext() const
+        {
+            return index_ > 0;
+        }
         const std::string& next()
         {
-            if (!hasNext()) throw std::out_of_range("Iterator exhausted");
+            if (!hasNext())
+                throw std::out_of_range("Iterator exhausted");
             return col_.words_[--index_];
         }
 
@@ -78,8 +99,14 @@ public:
         std::size_t           index_;
     };
 
-    ForwardIterator forwardIterator() const { return ForwardIterator(*this); }
-    ReverseIterator reverseIterator() const { return ReverseIterator(*this); }
+    ForwardIterator forwardIterator() const
+    {
+        return ForwardIterator(*this);
+    }
+    ReverseIterator reverseIterator() const
+    {
+        return ReverseIterator(*this);
+    }
 
 private:
     std::vector<std::string> words_;
@@ -90,7 +117,11 @@ private:
 class NumberRange
 {
 public:
-    NumberRange(int from, int to) : from_(from), to_(to) {}
+    NumberRange(int from, int to)
+        : from_(from)
+        , to_(to)
+    {
+    }
 
     struct Iterator
     {
@@ -101,16 +132,43 @@ public:
         using reference         = const int&;
 
         int current;
-        explicit Iterator(int v) : current(v) {}
-        int       operator*()  const  { return current; }
-        Iterator& operator++()        { ++current; return *this; }
-        Iterator  operator++(int)     { Iterator tmp(*this); ++current; return tmp; }
-        bool      operator==(const Iterator& o) const { return current == o.current; }
-        bool      operator!=(const Iterator& o) const { return current != o.current; }
+        explicit Iterator(int v)
+            : current(v)
+        {
+        }
+        int operator*() const
+        {
+            return current;
+        }
+        Iterator& operator++()
+        {
+            ++current;
+            return *this;
+        }
+        Iterator operator++(int)
+        {
+            Iterator tmp(*this);
+            ++current;
+            return tmp;
+        }
+        bool operator==(const Iterator& o) const
+        {
+            return current == o.current;
+        }
+        bool operator!=(const Iterator& o) const
+        {
+            return current != o.current;
+        }
     };
 
-    Iterator begin() const { return Iterator(from_); }
-    Iterator end()   const { return Iterator(to_ + 1); }
+    Iterator begin() const
+    {
+        return Iterator(from_);
+    }
+    Iterator end() const
+    {
+        return Iterator(to_ + 1);
+    }
 
 private:
     int from_, to_;

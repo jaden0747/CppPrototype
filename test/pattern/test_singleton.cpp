@@ -1,5 +1,5 @@
-#include <gtest/gtest.h>
 #include "pattern/singleton.hpp"
+#include <gtest/gtest.h>
 #include <thread>
 #include <vector>
 
@@ -54,18 +54,17 @@ TEST(Singleton, NotMoveConstructible)
 // ---------------------------------------------------------------------------
 TEST(Singleton, ThreadSafeInitialization)
 {
-    const int NUM_THREADS = 32;
-    std::vector<Singleton*> ptrs(NUM_THREADS, nullptr);
+    const int                NUM_THREADS = 32;
+    std::vector<Singleton*>  ptrs(NUM_THREADS, nullptr);
     std::vector<std::thread> threads;
     threads.reserve(NUM_THREADS);
 
     for (int i = 0; i < NUM_THREADS; ++i)
     {
-        threads.emplace_back([&ptrs, i]() {
-            ptrs[i] = &Singleton::instance();
-        });
+        threads.emplace_back([&ptrs, i]() { ptrs[i] = &Singleton::instance(); });
     }
-    for (auto& t : threads) t.join();
+    for (auto& t : threads)
+        t.join();
 
     for (int i = 1; i < NUM_THREADS; ++i)
         EXPECT_EQ(ptrs[0], ptrs[i]);

@@ -30,27 +30,39 @@
 //  - Many groups of objects can share extrinsic state once removed.
 // ---------------------------------------------------------------------------
 
-namespace pattern {
+namespace pattern
+{
 
 // ---------- Flyweight (intrinsic state) ----------------------------------
 
 class TreeType
 {
 public:
-    TreeType(const std::string& name,
-             const std::string& colour,
-             const std::string& texture)
-        : name_(name), colour_(colour), texture_(texture) {}
+    TreeType(const std::string& name, const std::string& colour, const std::string& texture)
+        : name_(name)
+        , colour_(colour)
+        , texture_(texture)
+    {
+    }
 
-    const std::string& name()    const { return name_; }
-    const std::string& colour()  const { return colour_; }
-    const std::string& texture() const { return texture_; }
+    const std::string& name() const
+    {
+        return name_;
+    }
+    const std::string& colour() const
+    {
+        return colour_;
+    }
+    const std::string& texture() const
+    {
+        return texture_;
+    }
 
     // Simulates rendering a tree with extrinsic (x, y) coordinates
     std::string render(int x, int y) const
     {
-        return "Draw " + name_ + " [" + colour_ + "/" + texture_ + "] at ("
-               + std::to_string(x) + "," + std::to_string(y) + ")";
+        return "Draw " + name_ + " [" + colour_ + "/" + texture_ + "] at (" + std::to_string(x) + "," +
+               std::to_string(y) + ")";
     }
 
 private:
@@ -64,21 +76,23 @@ private:
 class TreeTypeFactory
 {
 public:
-    std::shared_ptr<TreeType> getTreeType(const std::string& name,
-                                          const std::string& colour,
-                                          const std::string& texture)
+    std::shared_ptr<TreeType>
+    getTreeType(const std::string& name, const std::string& colour, const std::string& texture)
     {
         std::string key = name + "|" + colour + "|" + texture;
-        auto it = cache_.find(key);
+        auto        it  = cache_.find(key);
         if (it != cache_.end())
             return it->second;
 
-        auto type = std::make_shared<TreeType>(name, colour, texture);
+        auto type   = std::make_shared<TreeType>(name, colour, texture);
         cache_[key] = type;
         return type;
     }
 
-    std::size_t cacheSize() const { return cache_.size(); }
+    std::size_t cacheSize() const
+    {
+        return cache_.size();
+    }
 
 private:
     std::unordered_map<std::string, std::shared_ptr<TreeType>> cache_;
@@ -88,11 +102,14 @@ private:
 
 struct Tree
 {
-    int x;
-    int y;
+    int                       x;
+    int                       y;
     std::shared_ptr<TreeType> type;
 
-    std::string render() const { return type->render(x, y); }
+    std::string render() const
+    {
+        return type->render(x, y);
+    }
 };
 
 // ---------- Forest (collection of contexts) ------------------------------
@@ -100,23 +117,29 @@ struct Tree
 class Forest
 {
 public:
-    void plantTree(int x, int y,
-                   const std::string& name,
-                   const std::string& colour,
-                   const std::string& texture)
+    void plantTree(int x, int y, const std::string& name, const std::string& colour, const std::string& texture)
     {
         auto type = factory_.getTreeType(name, colour, texture);
         trees_.push_back({x, y, type});
     }
 
-    std::size_t treeCount()      const { return trees_.size(); }
-    std::size_t uniqueTypeCount() const { return factory_.cacheSize(); }
+    std::size_t treeCount() const
+    {
+        return trees_.size();
+    }
+    std::size_t uniqueTypeCount() const
+    {
+        return factory_.cacheSize();
+    }
 
-    const Tree& treeAt(std::size_t idx) const { return trees_[idx]; }
+    const Tree& treeAt(std::size_t idx) const
+    {
+        return trees_[idx];
+    }
 
 private:
-    TreeTypeFactory        factory_;
-    std::vector<Tree>      trees_;
+    TreeTypeFactory   factory_;
+    std::vector<Tree> trees_;
 };
 
 } // namespace pattern

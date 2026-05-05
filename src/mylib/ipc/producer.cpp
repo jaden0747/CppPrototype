@@ -6,7 +6,9 @@
 #include <ctime>
 
 Producer::Producer(IChannel& channel, MessageFn msgFn, std::chrono::milliseconds interval)
-    : m_channel(channel), m_msgFn(std::move(msgFn)), m_interval(interval)
+    : m_channel(channel)
+    , m_msgFn(std::move(msgFn))
+    , m_interval(interval)
 {
 }
 
@@ -24,8 +26,8 @@ void Producer::start()
 void Producer::stop()
 {
     if (!m_running.exchange(false))
-        return;  // already stopped
-    m_sleepCv.notify_one();   // interrupt inter-message sleep immediately
+        return;             // already stopped
+    m_sleepCv.notify_one(); // interrupt inter-message sleep immediately
     if (m_thread.joinable())
         m_thread.join();
 }
@@ -33,14 +35,19 @@ void Producer::stop()
 Producer::MessageFn Producer::sensorSource()
 {
     // Capture seq by value so multiple Producer instances get independent counters.
-    return [seq = 0L]() mutable -> std::string {
+    return [seq = 0L]() mutable -> std::string
+    {
         struct timespec ts;
         ::clock_gettime(CLOCK_REALTIME, &ts);
         char buf[256];
-        ::snprintf(buf, sizeof(buf),
-                   "[%ld.%03ld] sensor_temp=%.2f  seq=%ld",
-                   (long)ts.tv_sec, ts.tv_nsec / 1'000'000L,
-                   20.0 + (::rand() % 100) / 10.0, seq++);
+        ::snprintf(
+            buf,
+            sizeof(buf),
+            "[%ld.%03ld] sensor_temp=%.2f  seq=%ld",
+            (long)ts.tv_sec,
+            ts.tv_nsec / 1'000'000L,
+            20.0 + (::rand() % 100) / 10.0,
+            seq++);
         return buf;
     };
 }
@@ -53,7 +60,7 @@ void Producer::run()
     while (m_running.load())
     {
         std::string msg = m_msgFn();
-        msg += '\n';   // consumer splits on newlines
+        msg += '\n'; // consumer splits on newlines
 
         if (m_channel.write(msg.data(), msg.size()) < 0)
         {

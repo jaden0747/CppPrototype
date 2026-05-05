@@ -1,8 +1,8 @@
 #pragma once
 #include <memory>
+#include <stdexcept>
 #include <string>
 #include <unordered_map>
-#include <stdexcept>
 
 // ---------------------------------------------------------------------------
 // Proxy Pattern
@@ -33,17 +33,18 @@
 //  - Remote access (remote proxy — not shown here).
 // ---------------------------------------------------------------------------
 
-namespace pattern {
+namespace pattern
+{
 
 // ---------- Subject interface --------------------------------------------
 
 class Image
 {
 public:
-    virtual ~Image() = default;
-    virtual void    display()                    = 0;
-    virtual std::string name() const             = 0;
-    virtual bool    isLoaded() const             = 0;
+    virtual ~Image()                     = default;
+    virtual void        display()        = 0;
+    virtual std::string name() const     = 0;
+    virtual bool        isLoaded() const = 0;
 };
 
 // ---------- Real Subject -------------------------------------------------
@@ -52,17 +53,29 @@ class RealImage : public Image
 {
 public:
     explicit RealImage(const std::string& filename)
-        : filename_(filename), loaded_(false)
+        : filename_(filename)
+        , loaded_(false)
     {
-        load();  // simulates expensive disk I/O
+        load(); // simulates expensive disk I/O
     }
 
-    void display() override { /* render pixel data */ }
-    std::string name() const override { return filename_; }
-    bool isLoaded()    const override { return loaded_; }
+    void display() override
+    { /* render pixel data */
+    }
+    std::string name() const override
+    {
+        return filename_;
+    }
+    bool isLoaded() const override
+    {
+        return loaded_;
+    }
 
 private:
-    void load() { loaded_ = true; }
+    void load()
+    {
+        loaded_ = true;
+    }
     std::string filename_;
     bool        loaded_;
 };
@@ -73,7 +86,10 @@ class LazyImageProxy : public Image
 {
 public:
     explicit LazyImageProxy(const std::string& filename)
-        : filename_(filename), real_(nullptr) {}
+        : filename_(filename)
+        , real_(nullptr)
+    {
+    }
 
     void display() override
     {
@@ -82,8 +98,14 @@ public:
         real_->display();
     }
 
-    std::string name()     const override { return filename_; }
-    bool        isLoaded() const override { return real_ != nullptr && real_->isLoaded(); }
+    std::string name() const override
+    {
+        return filename_;
+    }
+    bool isLoaded() const override
+    {
+        return real_ != nullptr && real_->isLoaded();
+    }
 
 private:
     std::string                filename_;
@@ -92,28 +114,42 @@ private:
 
 // ---------- 2. Protection Proxy -----------------------------------------
 
-enum class Role { Guest, User, Admin };
+enum class Role
+{
+    Guest,
+    User,
+    Admin
+};
 
 class Service
 {
 public:
-    virtual ~Service() = default;
-    virtual std::string getData() const  = 0;
-    virtual bool        deleteData()     = 0;
+    virtual ~Service()                  = default;
+    virtual std::string getData() const = 0;
+    virtual bool        deleteData()    = 0;
 };
 
 class RealService : public Service
 {
 public:
-    std::string getData()    const override { return "Sensitive data"; }
-    bool        deleteData()       override { return true; }
+    std::string getData() const override
+    {
+        return "Sensitive data";
+    }
+    bool deleteData() override
+    {
+        return true;
+    }
 };
 
 class ProtectionProxy : public Service
 {
 public:
     ProtectionProxy(std::unique_ptr<Service> real, Role role)
-        : real_(std::move(real)), role_(role) {}
+        : real_(std::move(real))
+        , role_(role)
+    {
+    }
 
     std::string getData() const override
     {
@@ -131,7 +167,7 @@ public:
 
 private:
     std::unique_ptr<Service> real_;
-    Role role_;
+    Role                     role_;
 };
 
 // ---------- 3. Caching Proxy --------------------------------------------
@@ -139,7 +175,7 @@ private:
 class DataSource
 {
 public:
-    virtual ~DataSource() = default;
+    virtual ~DataSource()                                   = default;
     virtual std::string fetch(const std::string& key) const = 0;
 };
 
@@ -158,7 +194,9 @@ class CachingProxy : public DataSource
 {
 public:
     explicit CachingProxy(std::unique_ptr<DataSource> real)
-        : real_(std::move(real)) {}
+        : real_(std::move(real))
+    {
+    }
 
     std::string fetch(const std::string& key) const override
     {
@@ -167,14 +205,17 @@ public:
             return it->second;
 
         std::string result = real_->fetch(key);
-        cache_[key] = result;
+        cache_[key]        = result;
         return result;
     }
 
-    std::size_t cacheSize() const { return cache_.size(); }
+    std::size_t cacheSize() const
+    {
+        return cache_.size();
+    }
 
 private:
-    std::unique_ptr<DataSource>                  real_;
+    std::unique_ptr<DataSource>                          real_;
     mutable std::unordered_map<std::string, std::string> cache_;
 };
 

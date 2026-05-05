@@ -2,9 +2,9 @@
 
 #include "settings/dirty_tracker.hpp"
 
-#include <nlohmann/json.hpp>
 #include <array>
 #include <iostream>
+#include <nlohmann/json.hpp>
 #include <string>
 
 // ---------------------------------------------------------------------------
@@ -16,19 +16,17 @@
 // ---------------------------------------------------------------------------
 struct RenderSettings : DirtyTracker
 {
-    std::array<float, 4> clearColor    = {0.1f, 0.1f, 0.1f, 1.0f};  // RGBA [0..1]
+    std::array<float, 4> clearColor    = {0.1f, 0.1f, 0.1f, 1.0f}; // RGBA [0..1]
     bool                 wireframe     = false;
-    std::string          shadowQuality = "medium";  // "low" | "medium" | "high"
+    std::string          shadowQuality = "medium"; // "low" | "medium" | "high"
     int                  maxLights     = 8;
 
-    NLOHMANN_DEFINE_TYPE_INTRUSIVE(RenderSettings,
-        clearColor, wireframe, shadowQuality, maxLights)
+    NLOHMANN_DEFINE_TYPE_INTRUSIVE(RenderSettings, clearColor, wireframe, shadowQuality, maxLights)
 
 protected:
     void onChanged() override
     {
         // Invoked automatically by DirtyTracker::dirty() on every load/set.
-        std::cout << "[RenderSettings] Settings updated (modifiedCount="
-                  << getModifiedCount() << ")\n";
+        std::cout << "[RenderSettings] Settings updated (modifiedCount=" << getModifiedCount() << ")\n";
     }
 };

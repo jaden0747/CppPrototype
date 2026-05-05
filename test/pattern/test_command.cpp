@@ -1,5 +1,5 @@
-#include <gtest/gtest.h>
 #include "pattern/command.hpp"
+#include <gtest/gtest.h>
 
 using namespace pattern;
 
@@ -34,7 +34,7 @@ TEST(Command, DeleteMoreThanContentClearsAll)
 // ---------------------------------------------------------------------------
 TEST(Command, AppendCommandExecute)
 {
-    TextEditor editor;
+    TextEditor    editor;
     AppendCommand cmd(editor, " World");
     editor.append("Hello");
     cmd.execute();
@@ -78,7 +78,7 @@ TEST(Command, DeleteLastCommandUndo)
 // ---------------------------------------------------------------------------
 TEST(Command, HistoryExecuteUpdatesContent)
 {
-    TextEditor editor;
+    TextEditor     editor;
     CommandHistory history;
     history.execute(std::unique_ptr<Command>(new AppendCommand(editor, "Hi")));
     EXPECT_EQ("Hi", editor.content());
@@ -86,7 +86,7 @@ TEST(Command, HistoryExecuteUpdatesContent)
 
 TEST(Command, HistoryUndoRevertsContent)
 {
-    TextEditor editor;
+    TextEditor     editor;
     CommandHistory history;
     history.execute(std::unique_ptr<Command>(new AppendCommand(editor, "Hi")));
     history.undo();
@@ -95,7 +95,7 @@ TEST(Command, HistoryUndoRevertsContent)
 
 TEST(Command, HistoryRedoReappliesContent)
 {
-    TextEditor editor;
+    TextEditor     editor;
     CommandHistory history;
     history.execute(std::unique_ptr<Command>(new AppendCommand(editor, "Hi")));
     history.undo();
@@ -111,7 +111,7 @@ TEST(Command, HistoryUndoOnEmptyReturnsFalse)
 
 TEST(Command, HistoryNewActionClearsRedo)
 {
-    TextEditor editor;
+    TextEditor     editor;
     CommandHistory history;
     history.execute(std::unique_ptr<Command>(new AppendCommand(editor, "A")));
     history.undo();
@@ -122,13 +122,13 @@ TEST(Command, HistoryNewActionClearsRedo)
 
 TEST(Command, MultipleUndoRedo)
 {
-    TextEditor editor;
+    TextEditor     editor;
     CommandHistory history;
     history.execute(std::unique_ptr<Command>(new AppendCommand(editor, "Hello")));
     history.execute(std::unique_ptr<Command>(new AppendCommand(editor, " World")));
-    history.undo();  // removes " World"
+    history.undo(); // removes " World"
     EXPECT_EQ("Hello", editor.content());
-    history.redo();  // re-adds " World"
+    history.redo(); // re-adds " World"
     EXPECT_EQ("Hello World", editor.content());
 }
 

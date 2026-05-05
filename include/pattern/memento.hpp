@@ -1,8 +1,8 @@
 #pragma once
-#include <string>
-#include <vector>
 #include <memory>
 #include <stdexcept>
+#include <string>
+#include <vector>
 
 // ---------------------------------------------------------------------------
 // Memento Pattern
@@ -27,7 +27,8 @@
 //    details and break the object's encapsulation.
 // ---------------------------------------------------------------------------
 
-namespace pattern {
+namespace pattern
+{
 
 // ---------- Originator ---------------------------------------------------
 
@@ -38,30 +39,51 @@ public:
     class Memento
     {
     public:
-        const std::string& content() const { return content_; }
-        const std::string& label()   const { return label_; }
+        const std::string& content() const
+        {
+            return content_;
+        }
+        const std::string& label() const
+        {
+            return label_;
+        }
+
     private:
         friend class Editor;
         Memento(const std::string& content, const std::string& lbl)
-            : content_(content), label_(lbl) {}
+            : content_(content)
+            , label_(lbl)
+        {
+        }
         std::string content_;
         std::string label_;
     };
 
-    void type(const std::string& text)       { content_ += text; }
+    void type(const std::string& text)
+    {
+        content_ += text;
+    }
     void deleteLast(std::size_t n)
     {
-        if (n >= content_.size()) content_.clear();
-        else content_.erase(content_.size() - n, n);
+        if (n >= content_.size())
+            content_.clear();
+        else
+            content_.erase(content_.size() - n, n);
     }
-    const std::string& content() const { return content_; }
+    const std::string& content() const
+    {
+        return content_;
+    }
 
     Memento save(const std::string& label = "") const
     {
         return Memento(content_, label);
     }
 
-    void restore(const Memento& m) { content_ = m.content_; }
+    void restore(const Memento& m)
+    {
+        content_ = m.content_;
+    }
 
 private:
     std::string content_;
@@ -72,7 +94,10 @@ private:
 class History
 {
 public:
-    void push(const Editor::Memento& m) { snapshots_.push_back(m); }
+    void push(const Editor::Memento& m)
+    {
+        snapshots_.push_back(m);
+    }
 
     Editor::Memento pop()
     {
@@ -83,8 +108,14 @@ public:
         return m;
     }
 
-    bool    empty()  const { return snapshots_.empty(); }
-    std::size_t size() const { return snapshots_.size(); }
+    bool empty() const
+    {
+        return snapshots_.empty();
+    }
+    std::size_t size() const
+    {
+        return snapshots_.size();
+    }
 
     const Editor::Memento& top() const
     {

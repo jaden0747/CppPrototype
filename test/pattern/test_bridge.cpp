@@ -1,5 +1,5 @@
-#include <gtest/gtest.h>
 #include "pattern/bridge.hpp"
+#include <gtest/gtest.h>
 
 using namespace pattern;
 
@@ -56,7 +56,7 @@ TEST(Bridge, TogglePowerTwiceRestoresState)
 TEST(Bridge, VolumeUpIncreasesBy10)
 {
     RemoteControl remote(std::unique_ptr<Device>(new TV()));
-    int initial = remote.device().volume();
+    int           initial = remote.device().volume();
     remote.volumeUp();
     EXPECT_EQ(initial + 10, remote.device().volume());
 }
@@ -64,7 +64,7 @@ TEST(Bridge, VolumeUpIncreasesBy10)
 TEST(Bridge, VolumeDownDecreasesBy10)
 {
     RemoteControl remote(std::unique_ptr<Device>(new TV()));
-    int initial = remote.device().volume();
+    int           initial = remote.device().volume();
     remote.volumeDown();
     EXPECT_EQ(initial - 10, remote.device().volume());
 }
@@ -72,7 +72,7 @@ TEST(Bridge, VolumeDownDecreasesBy10)
 TEST(Bridge, ChannelUpIncreasesBy1)
 {
     RemoteControl remote(std::unique_ptr<Device>(new TV()));
-    int initial = remote.device().channel();
+    int           initial = remote.device().channel();
     remote.channelUp();
     EXPECT_EQ(initial + 1, remote.device().channel());
 }

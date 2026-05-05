@@ -1,6 +1,6 @@
-#include <gtest/gtest.h>
 #include "pattern/adapter.hpp"
 #include <cmath>
+#include <gtest/gtest.h>
 
 using namespace pattern;
 
@@ -35,8 +35,8 @@ TEST(Adapter, RoundPegFitsExactly)
 // ---------------------------------------------------------------------------
 TEST(Adapter, AdapterRadiusIsHalfDiagonal)
 {
-    SquarePeg        peg(2.0);       // width = 2
-    SquarePegAdapter adapter(peg);   // radius = 2 * sqrt(2) / 2 ≈ 1.414
+    SquarePeg        peg(2.0);     // width = 2
+    SquarePegAdapter adapter(peg); // radius = 2 * sqrt(2) / 2 ≈ 1.414
 
     double expected = 2.0 * std::sqrt(2.0) / 2.0;
     EXPECT_NEAR(expected, adapter.radius(), EPS);
@@ -45,7 +45,7 @@ TEST(Adapter, AdapterRadiusIsHalfDiagonal)
 TEST(Adapter, SmallSquarePegFitsInBigHole)
 {
     RoundHole        hole(5.0);
-    SquarePeg        peg(4.0);       // enclosing circle radius ≈ 2.828
+    SquarePeg        peg(4.0); // enclosing circle radius ≈ 2.828
     SquarePegAdapter adapter(peg);
     EXPECT_TRUE(hole.fits(adapter.radius()));
 }
@@ -53,7 +53,7 @@ TEST(Adapter, SmallSquarePegFitsInBigHole)
 TEST(Adapter, LargeSquarePegDoesNotFit)
 {
     RoundHole        hole(5.0);
-    SquarePeg        peg(8.0);       // enclosing circle radius ≈ 5.657
+    SquarePeg        peg(8.0); // enclosing circle radius ≈ 5.657
     SquarePegAdapter adapter(peg);
     EXPECT_FALSE(hole.fits(adapter.radius()));
 }
@@ -64,7 +64,7 @@ TEST(Adapter, LargeSquarePegDoesNotFit)
 TEST(Adapter, ClassAdapterRadiusIsHalfDiagonal)
 {
     SquarePegClassAdapter adapter(2.0);
-    double expected = 2.0 * std::sqrt(2.0) / 2.0;
+    double                expected = 2.0 * std::sqrt(2.0) / 2.0;
     EXPECT_NEAR(expected, adapter.radius(), EPS);
 }
 

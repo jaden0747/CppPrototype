@@ -1,5 +1,5 @@
-#include <gtest/gtest.h>
 #include "pattern/factory_method.hpp"
+#include <gtest/gtest.h>
 
 using namespace pattern;
 
@@ -9,7 +9,7 @@ using namespace pattern;
 TEST(FactoryMethod, RoadLogisticsCreatesTruck)
 {
     RoadLogistics logistics;
-    auto transport = logistics.createTransport();
+    auto          transport = logistics.createTransport();
     ASSERT_NE(nullptr, transport.get());
     EXPECT_EQ("Truck", transport->type());
 }
@@ -17,7 +17,7 @@ TEST(FactoryMethod, RoadLogisticsCreatesTruck)
 TEST(FactoryMethod, SeaLogisticsCreatesShip)
 {
     SeaLogistics logistics;
-    auto transport = logistics.createTransport();
+    auto         transport = logistics.createTransport();
     ASSERT_NE(nullptr, transport.get());
     EXPECT_EQ("Ship", transport->type());
 }
@@ -25,7 +25,7 @@ TEST(FactoryMethod, SeaLogisticsCreatesShip)
 TEST(FactoryMethod, AirLogisticsCreatesPlane)
 {
     AirLogistics logistics;
-    auto transport = logistics.createTransport();
+    auto         transport = logistics.createTransport();
     ASSERT_NE(nullptr, transport.get());
     EXPECT_EQ("Plane", transport->type());
 }
@@ -72,7 +72,7 @@ TEST(FactoryMethod, PlanDeliveryUsesCorrectTransport)
 TEST(FactoryMethod, PolymorphicUsage)
 {
     std::unique_ptr<Logistics> logistics = std::unique_ptr<Logistics>(new SeaLogistics());
-    auto transport = logistics->createTransport();
+    auto                       transport = logistics->createTransport();
     EXPECT_EQ("Ship", transport->type());
 }
 
@@ -97,8 +97,8 @@ TEST(FactoryMethod, MakeLogisticsUnknownThrows)
 TEST(FactoryMethod, EachCreationIsUnique)
 {
     RoadLogistics logistics;
-    auto t1 = logistics.createTransport();
-    auto t2 = logistics.createTransport();
+    auto          t1 = logistics.createTransport();
+    auto          t2 = logistics.createTransport();
     EXPECT_NE(t1.get(), t2.get());
 }
 

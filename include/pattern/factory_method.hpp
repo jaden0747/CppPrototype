@@ -1,7 +1,7 @@
 #pragma once
 #include <memory>
-#include <string>
 #include <stdexcept>
+#include <string>
 
 // ---------------------------------------------------------------------------
 // Factory Method Pattern
@@ -26,37 +26,56 @@
 //  - Frameworks that call library code from application code (inversion).
 // ---------------------------------------------------------------------------
 
-namespace pattern {
+namespace pattern
+{
 
 // ---------- Product hierarchy --------------------------------------------
 
 class Transport
 {
 public:
-    virtual ~Transport() = default;
+    virtual ~Transport()                = default;
     virtual std::string deliver() const = 0;
-    virtual std::string type()    const = 0;
+    virtual std::string type() const    = 0;
 };
 
 class Truck : public Transport
 {
 public:
-    std::string deliver() const override { return "Delivering by land in a truck"; }
-    std::string type()    const override { return "Truck"; }
+    std::string deliver() const override
+    {
+        return "Delivering by land in a truck";
+    }
+    std::string type() const override
+    {
+        return "Truck";
+    }
 };
 
 class Ship : public Transport
 {
 public:
-    std::string deliver() const override { return "Delivering by sea in a ship"; }
-    std::string type()    const override { return "Ship"; }
+    std::string deliver() const override
+    {
+        return "Delivering by sea in a ship";
+    }
+    std::string type() const override
+    {
+        return "Ship";
+    }
 };
 
 class Plane : public Transport
 {
 public:
-    std::string deliver() const override { return "Delivering by air in a plane"; }
-    std::string type()    const override { return "Plane"; }
+    std::string deliver() const override
+    {
+        return "Delivering by air in a plane";
+    }
+    std::string type() const override
+    {
+        return "Plane";
+    }
 };
 
 // ---------- Creator hierarchy --------------------------------------------
@@ -109,9 +128,12 @@ public:
 
 inline std::unique_ptr<Logistics> makeLogistics(const std::string& kind)
 {
-    if (kind == "road") return std::unique_ptr<Logistics>(new RoadLogistics());
-    if (kind == "sea")  return std::unique_ptr<Logistics>(new SeaLogistics());
-    if (kind == "air")  return std::unique_ptr<Logistics>(new AirLogistics());
+    if (kind == "road")
+        return std::unique_ptr<Logistics>(new RoadLogistics());
+    if (kind == "sea")
+        return std::unique_ptr<Logistics>(new SeaLogistics());
+    if (kind == "air")
+        return std::unique_ptr<Logistics>(new AirLogistics());
     throw std::invalid_argument("Unknown logistics kind: " + kind);
 }
 

@@ -1,5 +1,5 @@
-#include <gtest/gtest.h>
 #include "pattern/template_method.hpp"
+#include <gtest/gtest.h>
 
 using namespace pattern;
 
@@ -23,14 +23,14 @@ TEST(TemplateMethod, CsvMinerParsedLinesHavePrefix)
 
 TEST(TemplateMethod, CsvMinerReportContainsRowCount)
 {
-    CsvMiner miner;
+    CsvMiner    miner;
     std::string report = miner.mine("a;b;c");
     EXPECT_NE(std::string::npos, report.find("3"));
 }
 
 TEST(TemplateMethod, CsvMinerReportContainsAnalysisNote)
 {
-    CsvMiner miner;
+    CsvMiner    miner;
     std::string report = miner.mine("x;y");
     EXPECT_NE(std::string::npos, report.find("CSV analysis"));
 }
@@ -62,7 +62,7 @@ TEST(TemplateMethod, JsonMinerParsedLineHasPrefix)
 
 TEST(TemplateMethod, JsonMinerReportUsesDefaultAnalysis)
 {
-    JsonMiner miner;
+    JsonMiner   miner;
     std::string report = miner.mine("{}");
     EXPECT_NE(std::string::npos, report.find("default analysis"));
 }

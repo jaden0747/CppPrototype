@@ -1,5 +1,5 @@
-#include <gtest/gtest.h>
 #include "pattern/memento.hpp"
+#include <gtest/gtest.h>
 
 using namespace pattern;
 
@@ -34,7 +34,7 @@ TEST(Memento, RestoreReverts)
 TEST(Memento, MementoLabel)
 {
     Editor e;
-    auto m = e.save("initial");
+    auto   m = e.save("initial");
     EXPECT_EQ("initial", m.label());
 }
 
@@ -49,7 +49,7 @@ TEST(Memento, HistoryIsEmptyInitially)
 
 TEST(Memento, HistoryPushIncreasesSize)
 {
-    Editor e;
+    Editor  e;
     History h;
     h.push(e.save());
     EXPECT_EQ(1u, h.size());
@@ -57,7 +57,7 @@ TEST(Memento, HistoryPushIncreasesSize)
 
 TEST(Memento, HistoryPopReturnsLastSnapshot)
 {
-    Editor e;
+    Editor  e;
     History h;
     e.type("A");
     h.push(e.save());
@@ -78,7 +78,7 @@ TEST(Memento, HistoryPopEmptyThrows)
 // ---------------------------------------------------------------------------
 TEST(Memento, UndoRestoresPreviousState)
 {
-    Editor e;
+    Editor  e;
     History h;
 
     e.type("Hello");
@@ -88,14 +88,14 @@ TEST(Memento, UndoRestoresPreviousState)
     h.push(e.save());
 
     // Undo " World"
-    h.pop();             // discard current
-    e.restore(h.top());  // restore previous
+    h.pop();            // discard current
+    e.restore(h.top()); // restore previous
     EXPECT_EQ("Hello", e.content());
 }
 
 TEST(Memento, MultipleUndos)
 {
-    Editor e;
+    Editor  e;
     History h;
 
     h.push(e.save("empty"));
@@ -104,11 +104,11 @@ TEST(Memento, MultipleUndos)
     e.type("B");
     h.push(e.save("AB"));
 
-    h.pop();             // discard AB
+    h.pop();            // discard AB
     e.restore(h.top()); // restore A
     EXPECT_EQ("A", e.content());
 
-    h.pop();              // discard A
+    h.pop();            // discard A
     e.restore(h.top()); // restore empty
     EXPECT_TRUE(e.content().empty());
 }

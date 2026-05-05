@@ -1,5 +1,5 @@
-#include <gtest/gtest.h>
 #include "pattern/facade.hpp"
+#include <gtest/gtest.h>
 
 using namespace pattern;
 
@@ -26,14 +26,14 @@ TEST(Facade, VideoFileCodecUnknown)
 
 TEST(Facade, CodecFactoryExtractContainsCodecName)
 {
-    VideoFile f("film.mp4");
+    VideoFile   f("film.mp4");
     std::string result = CodecFactory::extract(f);
     EXPECT_NE(std::string::npos, result.find("h264"));
 }
 
 TEST(Facade, BitrateReaderReadContainsPath)
 {
-    VideoFile f("sample.mp4");
+    VideoFile   f("sample.mp4");
     std::string data = BitrateReader::read(f, "h264");
     EXPECT_NE(std::string::npos, data.find("sample.mp4"));
 }
@@ -56,29 +56,29 @@ TEST(Facade, AudioMixerFixContainsInput)
 TEST(Facade, ConvertReturnsNonEmptyString)
 {
     VideoConverter vc;
-    std::string result = vc.convert("input.mp4", "mkv");
+    std::string    result = vc.convert("input.mp4", "mkv");
     EXPECT_FALSE(result.empty());
 }
 
 TEST(Facade, ConvertStoresLastResult)
 {
     VideoConverter vc;
-    std::string result = vc.convert("clip.mkv", "mp4");
+    std::string    result = vc.convert("clip.mkv", "mp4");
     EXPECT_EQ(result, vc.lastResult());
 }
 
 TEST(Facade, ConvertContainsMixedAudio)
 {
     VideoConverter vc;
-    std::string result = vc.convert("video.mp4", "mkv");
+    std::string    result = vc.convert("video.mp4", "mkv");
     EXPECT_NE(std::string::npos, result.find("MixedAudio"));
 }
 
 TEST(Facade, ConvertMultipleFiles)
 {
     VideoConverter vc;
-    auto r1 = vc.convert("a.mp4", "mkv");
-    auto r2 = vc.convert("b.mkv", "mp4");
+    auto           r1 = vc.convert("a.mp4", "mkv");
+    auto           r2 = vc.convert("b.mkv", "mp4");
     EXPECT_NE(r1, r2);
     EXPECT_EQ(r2, vc.lastResult());
 }

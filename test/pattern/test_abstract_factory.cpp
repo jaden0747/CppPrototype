@@ -1,5 +1,5 @@
-#include <gtest/gtest.h>
 #include "pattern/abstract_factory.hpp"
+#include <gtest/gtest.h>
 
 using namespace pattern;
 
@@ -9,7 +9,7 @@ using namespace pattern;
 TEST(AbstractFactory, ModernChairHasCorrectStyle)
 {
     ModernFurnitureFactory factory;
-    auto chair = factory.createChair();
+    auto                   chair = factory.createChair();
     ASSERT_NE(nullptr, chair.get());
     EXPECT_EQ("Modern", chair->style());
 }
@@ -17,14 +17,14 @@ TEST(AbstractFactory, ModernChairHasCorrectStyle)
 TEST(AbstractFactory, ModernSofaHasCorrectStyle)
 {
     ModernFurnitureFactory factory;
-    auto sofa = factory.createSofa();
+    auto                   sofa = factory.createSofa();
     EXPECT_EQ("Modern", sofa->style());
 }
 
 TEST(AbstractFactory, ModernCoffeeTableHasCorrectStyle)
 {
     ModernFurnitureFactory factory;
-    auto table = factory.createCoffeeTable();
+    auto                   table = factory.createCoffeeTable();
     EXPECT_EQ("Modern", table->style());
 }
 
@@ -34,21 +34,21 @@ TEST(AbstractFactory, ModernCoffeeTableHasCorrectStyle)
 TEST(AbstractFactory, VictorianChairHasCorrectStyle)
 {
     VictorianFurnitureFactory factory;
-    auto chair = factory.createChair();
+    auto                      chair = factory.createChair();
     EXPECT_EQ("Victorian", chair->style());
 }
 
 TEST(AbstractFactory, VictorianSofaHasCorrectStyle)
 {
     VictorianFurnitureFactory factory;
-    auto sofa = factory.createSofa();
+    auto                      sofa = factory.createSofa();
     EXPECT_EQ("Victorian", sofa->style());
 }
 
 TEST(AbstractFactory, VictorianCoffeeTableHasCorrectStyle)
 {
     VictorianFurnitureFactory factory;
-    auto table = factory.createCoffeeTable();
+    auto                      table = factory.createCoffeeTable();
     EXPECT_EQ("Victorian", table->style());
 }
 
@@ -58,15 +58,15 @@ TEST(AbstractFactory, VictorianCoffeeTableHasCorrectStyle)
 TEST(AbstractFactory, ModernFamilyIsConsistent)
 {
     ModernFurnitureFactory f;
-    EXPECT_EQ(f.createChair()->style(),       f.createSofa()->style());
-    EXPECT_EQ(f.createSofa()->style(),        f.createCoffeeTable()->style());
+    EXPECT_EQ(f.createChair()->style(), f.createSofa()->style());
+    EXPECT_EQ(f.createSofa()->style(), f.createCoffeeTable()->style());
 }
 
 TEST(AbstractFactory, VictorianFamilyIsConsistent)
 {
     VictorianFurnitureFactory f;
-    EXPECT_EQ(f.createChair()->style(),       f.createSofa()->style());
-    EXPECT_EQ(f.createSofa()->style(),        f.createCoffeeTable()->style());
+    EXPECT_EQ(f.createChair()->style(), f.createSofa()->style());
+    EXPECT_EQ(f.createSofa()->style(), f.createCoffeeTable()->style());
 }
 
 // ---------------------------------------------------------------------------
@@ -74,9 +74,8 @@ TEST(AbstractFactory, VictorianFamilyIsConsistent)
 // ---------------------------------------------------------------------------
 TEST(AbstractFactory, PolymorphicFactory)
 {
-    std::unique_ptr<FurnitureFactory> factory =
-        std::unique_ptr<FurnitureFactory>(new VictorianFurnitureFactory());
-    auto chair = factory->createChair();
+    std::unique_ptr<FurnitureFactory> factory = std::unique_ptr<FurnitureFactory>(new VictorianFurnitureFactory());
+    auto                              chair   = factory->createChair();
     EXPECT_NE(std::string::npos, chair->sitOn().find("Victorian"));
 }
 
@@ -106,8 +105,8 @@ TEST(AbstractFactory, MakeFactoryUnknownThrows)
 TEST(AbstractFactory, EachCreationIsUnique)
 {
     ModernFurnitureFactory f;
-    auto c1 = f.createChair();
-    auto c2 = f.createChair();
+    auto                   c1 = f.createChair();
+    auto                   c2 = f.createChair();
     EXPECT_NE(c1.get(), c2.get());
 }
 

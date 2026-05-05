@@ -15,21 +15,18 @@ template <typename T>
 concept Numeric = std::is_arithmetic_v<T>;
 
 template <typename T>
-concept Addable = requires(T a, T b)
-{
-    {a + b}->std::convertible_to<T>;
+concept Addable = requires(T a, T b) {
+    { a + b } -> std::convertible_to<T>;
 };
 
 template <typename T>
-concept Printable = requires(T a)
-{
-    {std::cout << a}->std::same_as<std::ostream&>;
+concept Printable = requires(T a) {
+    { std::cout << a } -> std::same_as<std::ostream&>;
 };
 
 template <typename T>
-concept Hashable = requires(T a)
-{
-    {std::hash<T>{}(a)}->std::convertible_to<size_t>;
+concept Hashable = requires(T a) {
+    { std::hash<T>{}(a) } -> std::convertible_to<size_t>;
 };
 
 void demo_define_concepts()
@@ -57,14 +54,16 @@ T square(T x)
 
 // Way 2: requires clause
 template <typename T>
-requires Numeric<T> T cube(T x)
+    requires Numeric<T>
+T cube(T x)
 {
     return x * x * x;
 }
 
 // Way 3: Trailing requires
 template <typename T>
-T half(T x) requires Numeric<T>
+T half(T x)
+    requires Numeric<T>
 {
     return x / 2;
 }
@@ -92,20 +91,18 @@ void demo_using_concepts()
 // 3. requires Expressions
 // ──────────────────────────────────────────────────────────────────────────
 template <typename T>
-concept Container = requires(T c)
-{
+concept Container = requires(T c) {
     typename T::value_type;
     typename T::iterator;
-    {c.begin()}->std::same_as<typename T::iterator>;
-    {c.end()}->std::same_as<typename T::iterator>;
-    {c.size()}->std::convertible_to<size_t>;
-    {c.empty()}->std::convertible_to<bool>;
+    { c.begin() } -> std::same_as<typename T::iterator>;
+    { c.end() } -> std::same_as<typename T::iterator>;
+    { c.size() } -> std::convertible_to<size_t>;
+    { c.empty() } -> std::convertible_to<bool>;
 };
 
 template <typename T>
-concept Indexable = Container<T> && requires(T c, size_t i)
-{
-    {c[i]}->std::same_as<typename T::reference>;
+concept Indexable = Container<T> && requires(T c, size_t i) {
+    { c[i] } -> std::same_as<typename T::reference>;
 };
 
 void demo_requires_expression()
@@ -121,19 +118,17 @@ void demo_requires_expression()
 // 4. Compound & Nested Requirements
 // ──────────────────────────────────────────────────────────────────────────
 template <typename T>
-concept Comparable = requires(T a, T b)
-{
-    {a == b}->std::convertible_to<bool>;
-    {a != b}->std::convertible_to<bool>;
-    {a < b}->std::convertible_to<bool>;
-    {a > b}->std::convertible_to<bool>;
-    {a <= b}->std::convertible_to<bool>;
-    {a >= b}->std::convertible_to<bool>;
+concept Comparable = requires(T a, T b) {
+    { a == b } -> std::convertible_to<bool>;
+    { a != b } -> std::convertible_to<bool>;
+    { a < b } -> std::convertible_to<bool>;
+    { a > b } -> std::convertible_to<bool>;
+    { a <= b } -> std::convertible_to<bool>;
+    { a >= b } -> std::convertible_to<bool>;
 };
 
 template <typename T>
-concept SmallComparable = Comparable<T> && requires
-{
+concept SmallComparable = Comparable<T> && requires {
     requires sizeof(T) <= 16;
     requires std::is_copy_constructible_v<T>;
 };

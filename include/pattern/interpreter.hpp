@@ -1,8 +1,8 @@
 #pragma once
 #include <memory>
+#include <stdexcept>
 #include <string>
 #include <unordered_map>
-#include <stdexcept>
 #include <vector>
 
 // ---------------------------------------------------------------------------
@@ -32,7 +32,8 @@
 //    expressions, configuration mini-languages).
 // ---------------------------------------------------------------------------
 
-namespace pattern {
+namespace pattern
+{
 
 using Context = std::unordered_map<std::string, bool>;
 
@@ -41,7 +42,7 @@ using Context = std::unordered_map<std::string, bool>;
 class BoolExpr
 {
 public:
-    virtual ~BoolExpr() = default;
+    virtual ~BoolExpr()                              = default;
     virtual bool interpret(const Context& ctx) const = 0;
 };
 
@@ -50,8 +51,15 @@ public:
 class Literal : public BoolExpr
 {
 public:
-    explicit Literal(bool value) : value_(value) {}
-    bool interpret(const Context&) const override { return value_; }
+    explicit Literal(bool value)
+        : value_(value)
+    {
+    }
+    bool interpret(const Context&) const override
+    {
+        return value_;
+    }
+
 private:
     bool value_;
 };
@@ -59,7 +67,10 @@ private:
 class Variable : public BoolExpr
 {
 public:
-    explicit Variable(const std::string& name) : name_(name) {}
+    explicit Variable(const std::string& name)
+        : name_(name)
+    {
+    }
     bool interpret(const Context& ctx) const override
     {
         auto it = ctx.find(name_);
@@ -67,6 +78,7 @@ public:
             throw std::runtime_error("Undefined variable: " + name_);
         return it->second;
     }
+
 private:
     std::string name_;
 };
@@ -77,11 +89,14 @@ class NotExpr : public BoolExpr
 {
 public:
     explicit NotExpr(std::unique_ptr<BoolExpr> operand)
-        : operand_(std::move(operand)) {}
+        : operand_(std::move(operand))
+    {
+    }
     bool interpret(const Context& ctx) const override
     {
         return !operand_->interpret(ctx);
     }
+
 private:
     std::unique_ptr<BoolExpr> operand_;
 };
@@ -90,11 +105,15 @@ class AndExpr : public BoolExpr
 {
 public:
     AndExpr(std::unique_ptr<BoolExpr> left, std::unique_ptr<BoolExpr> right)
-        : left_(std::move(left)), right_(std::move(right)) {}
+        : left_(std::move(left))
+        , right_(std::move(right))
+    {
+    }
     bool interpret(const Context& ctx) const override
     {
         return left_->interpret(ctx) && right_->interpret(ctx);
     }
+
 private:
     std::unique_ptr<BoolExpr> left_;
     std::unique_ptr<BoolExpr> right_;
@@ -104,11 +123,15 @@ class OrExpr : public BoolExpr
 {
 public:
     OrExpr(std::unique_ptr<BoolExpr> left, std::unique_ptr<BoolExpr> right)
-        : left_(std::move(left)), right_(std::move(right)) {}
+        : left_(std::move(left))
+        , right_(std::move(right))
+    {
+    }
     bool interpret(const Context& ctx) const override
     {
         return left_->interpret(ctx) || right_->interpret(ctx);
     }
+
 private:
     std::unique_ptr<BoolExpr> left_;
     std::unique_ptr<BoolExpr> right_;

@@ -1,8 +1,8 @@
 #pragma once
+#include <cmath>
+#include <memory>
 #include <string>
 #include <vector>
-#include <memory>
-#include <cmath>
 
 // ---------------------------------------------------------------------------
 // Visitor Pattern
@@ -31,7 +31,8 @@
 //    operations on the structure.
 // ---------------------------------------------------------------------------
 
-namespace pattern {
+namespace pattern
+{
 
 // ---------- Forward declarations -----------------------------------------
 
@@ -44,10 +45,10 @@ class Triangle;
 class IShapeVisitor
 {
 public:
-    virtual ~IShapeVisitor() = default;
-    virtual void visit(Circle&    c) = 0;
+    virtual ~IShapeVisitor()         = default;
+    virtual void visit(Circle& c)    = 0;
     virtual void visit(Rectangle& r) = 0;
-    virtual void visit(Triangle&  t) = 0;
+    virtual void visit(Triangle& t)  = 0;
 };
 
 // ---------- Element interface -------------------------------------------
@@ -55,9 +56,9 @@ public:
 class Shape
 {
 public:
-    virtual ~Shape() = default;
-    virtual void accept(IShapeVisitor& v) = 0;
-    virtual std::string name() const = 0;
+    virtual ~Shape()                             = default;
+    virtual void        accept(IShapeVisitor& v) = 0;
+    virtual std::string name() const             = 0;
 };
 
 // ---------- Concrete elements --------------------------------------------
@@ -65,10 +66,23 @@ public:
 class Circle : public Shape
 {
 public:
-    explicit Circle(double radius) : radius_(radius) {}
-    void accept(IShapeVisitor& v) override { v.visit(*this); }
-    std::string name() const override { return "Circle"; }
-    double radius() const { return radius_; }
+    explicit Circle(double radius)
+        : radius_(radius)
+    {
+    }
+    void accept(IShapeVisitor& v) override
+    {
+        v.visit(*this);
+    }
+    std::string name() const override
+    {
+        return "Circle";
+    }
+    double radius() const
+    {
+        return radius_;
+    }
+
 private:
     double radius_;
 };
@@ -76,11 +90,28 @@ private:
 class Rectangle : public Shape
 {
 public:
-    Rectangle(double width, double height) : width_(width), height_(height) {}
-    void accept(IShapeVisitor& v) override { v.visit(*this); }
-    std::string name() const override { return "Rectangle"; }
-    double width()  const { return width_; }
-    double height() const { return height_; }
+    Rectangle(double width, double height)
+        : width_(width)
+        , height_(height)
+    {
+    }
+    void accept(IShapeVisitor& v) override
+    {
+        v.visit(*this);
+    }
+    std::string name() const override
+    {
+        return "Rectangle";
+    }
+    double width() const
+    {
+        return width_;
+    }
+    double height() const
+    {
+        return height_;
+    }
+
 private:
     double width_, height_;
 };
@@ -88,12 +119,33 @@ private:
 class Triangle : public Shape
 {
 public:
-    Triangle(double a, double b, double c) : a_(a), b_(b), c_(c) {}
-    void accept(IShapeVisitor& v) override { v.visit(*this); }
-    std::string name() const override { return "Triangle"; }
-    double a() const { return a_; }
-    double b() const { return b_; }
-    double c() const { return c_; }
+    Triangle(double a, double b, double c)
+        : a_(a)
+        , b_(b)
+        , c_(c)
+    {
+    }
+    void accept(IShapeVisitor& v) override
+    {
+        v.visit(*this);
+    }
+    std::string name() const override
+    {
+        return "Triangle";
+    }
+    double a() const
+    {
+        return a_;
+    }
+    double b() const
+    {
+        return b_;
+    }
+    double c() const
+    {
+        return c_;
+    }
+
 private:
     double a_, b_, c_;
 };
@@ -103,8 +155,14 @@ private:
 class AreaVisitor : public IShapeVisitor
 {
 public:
-    double total() const { return total_; }
-    void reset()         { total_ = 0.0; }
+    double total() const
+    {
+        return total_;
+    }
+    void reset()
+    {
+        total_ = 0.0;
+    }
 
     void visit(Circle& c) override
     {
@@ -128,8 +186,14 @@ private:
 class PerimeterVisitor : public IShapeVisitor
 {
 public:
-    double total() const { return total_; }
-    void reset()         { total_ = 0.0; }
+    double total() const
+    {
+        return total_;
+    }
+    void reset()
+    {
+        total_ = 0.0;
+    }
 
     void visit(Circle& c) override
     {
@@ -151,11 +215,23 @@ private:
 class NameCollectorVisitor : public IShapeVisitor
 {
 public:
-    const std::vector<std::string>& names() const { return names_; }
+    const std::vector<std::string>& names() const
+    {
+        return names_;
+    }
 
-    void visit(Circle&    c) override { names_.push_back(c.name()); }
-    void visit(Rectangle& r) override { names_.push_back(r.name()); }
-    void visit(Triangle&  t) override { names_.push_back(t.name()); }
+    void visit(Circle& c) override
+    {
+        names_.push_back(c.name());
+    }
+    void visit(Rectangle& r) override
+    {
+        names_.push_back(r.name());
+    }
+    void visit(Triangle& t) override
+    {
+        names_.push_back(t.name());
+    }
 
 private:
     std::vector<std::string> names_;

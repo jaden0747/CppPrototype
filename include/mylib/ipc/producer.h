@@ -17,16 +17,14 @@ class Producer
 public:
     using MessageFn = std::function<std::string()>;
 
-    Producer(IChannel&                   channel,
-             MessageFn                   msgFn,
-             std::chrono::milliseconds   interval = std::chrono::milliseconds{500});
+    Producer(IChannel& channel, MessageFn msgFn, std::chrono::milliseconds interval = std::chrono::milliseconds{500});
     ~Producer();
 
     void start();
-    void stop();   // idempotent; waits for thread to exit
+    void stop(); // idempotent; waits for thread to exit
 
     // Built-in data sources — pass one to the constructor or roll your own lambda.
-    static MessageFn sensorSource();   // timestamped sensor_temp readings (Day 1)
+    static MessageFn sensorSource(); // timestamped sensor_temp readings (Day 1)
 
 private:
     void run();
@@ -38,5 +36,5 @@ private:
     std::atomic<bool>       m_running{false};
     std::thread             m_thread;
     std::mutex              m_sleepMtx;
-    std::condition_variable m_sleepCv;   // lets stop() interrupt the inter-message sleep
+    std::condition_variable m_sleepCv; // lets stop() interrupt the inter-message sleep
 };

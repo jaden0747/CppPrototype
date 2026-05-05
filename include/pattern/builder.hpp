@@ -1,8 +1,8 @@
 #pragma once
+#include <sstream>
+#include <stdexcept>
 #include <string>
 #include <vector>
-#include <stdexcept>
-#include <sstream>
 
 // ---------------------------------------------------------------------------
 // Builder Pattern
@@ -29,22 +29,24 @@
 //  - The same build steps should produce different representations.
 // ---------------------------------------------------------------------------
 
-namespace pattern {
+namespace pattern
+{
 
 // ---------- Product -------------------------------------------------------
 
 struct Burger
 {
-    std::string bun;
-    std::string patty;
+    std::string              bun;
+    std::string              patty;
     std::vector<std::string> toppings;
-    bool toasted = false;
+    bool                     toasted = false;
 
     std::string describe() const
     {
         std::ostringstream ss;
         ss << "[" << bun << "] with " << patty << " patty";
-        if (toasted) ss << " (toasted)";
+        if (toasted)
+            ss << " (toasted)";
         for (const auto& t : toppings)
             ss << ", " << t;
         return ss.str();
@@ -56,12 +58,12 @@ struct Burger
 class BurgerBuilder
 {
 public:
-    virtual ~BurgerBuilder() = default;
-    virtual void setBun(const std::string& bun)           = 0;
-    virtual void setPatty(const std::string& patty)       = 0;
-    virtual void addTopping(const std::string& topping)   = 0;
-    virtual void setToasted(bool toasted)                  = 0;
-    virtual Burger getResult()                             = 0;
+    virtual ~BurgerBuilder()                              = default;
+    virtual void   setBun(const std::string& bun)         = 0;
+    virtual void   setPatty(const std::string& patty)     = 0;
+    virtual void   addTopping(const std::string& topping) = 0;
+    virtual void   setToasted(bool toasted)               = 0;
+    virtual Burger getResult()                            = 0;
 };
 
 // ---------- Concrete Builders ---------------------------------------------
@@ -69,12 +71,27 @@ public:
 class MeatBurgerBuilder : public BurgerBuilder
 {
 public:
-    MeatBurgerBuilder() { reset(); }
+    MeatBurgerBuilder()
+    {
+        reset();
+    }
 
-    void setBun(const std::string& bun)         override { burger_.bun = bun; }
-    void setPatty(const std::string& patty)     override { burger_.patty = patty; }
-    void addTopping(const std::string& topping) override { burger_.toppings.push_back(topping); }
-    void setToasted(bool toasted)               override { burger_.toasted = toasted; }
+    void setBun(const std::string& bun) override
+    {
+        burger_.bun = bun;
+    }
+    void setPatty(const std::string& patty) override
+    {
+        burger_.patty = patty;
+    }
+    void addTopping(const std::string& topping) override
+    {
+        burger_.toppings.push_back(topping);
+    }
+    void setToasted(bool toasted) override
+    {
+        burger_.toasted = toasted;
+    }
 
     Burger getResult() override
     {
@@ -84,19 +101,39 @@ public:
     }
 
 private:
-    void reset() { burger_ = Burger(); burger_.bun = "sesame"; burger_.patty = "beef"; }
+    void reset()
+    {
+        burger_       = Burger();
+        burger_.bun   = "sesame";
+        burger_.patty = "beef";
+    }
     Burger burger_;
 };
 
 class VeggieBurgerBuilder : public BurgerBuilder
 {
 public:
-    VeggieBurgerBuilder() { reset(); }
+    VeggieBurgerBuilder()
+    {
+        reset();
+    }
 
-    void setBun(const std::string& bun)         override { burger_.bun = bun; }
-    void setPatty(const std::string& patty)     override { burger_.patty = patty; }
-    void addTopping(const std::string& topping) override { burger_.toppings.push_back(topping); }
-    void setToasted(bool toasted)               override { burger_.toasted = toasted; }
+    void setBun(const std::string& bun) override
+    {
+        burger_.bun = bun;
+    }
+    void setPatty(const std::string& patty) override
+    {
+        burger_.patty = patty;
+    }
+    void addTopping(const std::string& topping) override
+    {
+        burger_.toppings.push_back(topping);
+    }
+    void setToasted(bool toasted) override
+    {
+        burger_.toasted = toasted;
+    }
 
     Burger getResult() override
     {
@@ -106,7 +143,12 @@ public:
     }
 
 private:
-    void reset() { burger_ = Burger(); burger_.bun = "whole-wheat"; burger_.patty = "black-bean"; }
+    void reset()
+    {
+        burger_       = Burger();
+        burger_.bun   = "whole-wheat";
+        burger_.patty = "black-bean";
+    }
     Burger burger_;
 };
 
@@ -115,7 +157,10 @@ private:
 class BurgerDirector
 {
 public:
-    explicit BurgerDirector(BurgerBuilder* builder) : builder_(builder) {}
+    explicit BurgerDirector(BurgerBuilder* builder)
+        : builder_(builder)
+    {
+    }
 
     void buildClassic()
     {
@@ -145,11 +190,30 @@ private:
 class FluentBurger
 {
 public:
-    FluentBurger& withBun(const std::string& bun)          { burger_.bun = bun; return *this; }
-    FluentBurger& withPatty(const std::string& patty)      { burger_.patty = patty; return *this; }
-    FluentBurger& withTopping(const std::string& topping)  { burger_.toppings.push_back(topping); return *this; }
-    FluentBurger& toasted(bool v = true)                   { burger_.toasted = v; return *this; }
-    Burger        build()                                  { return burger_; }
+    FluentBurger& withBun(const std::string& bun)
+    {
+        burger_.bun = bun;
+        return *this;
+    }
+    FluentBurger& withPatty(const std::string& patty)
+    {
+        burger_.patty = patty;
+        return *this;
+    }
+    FluentBurger& withTopping(const std::string& topping)
+    {
+        burger_.toppings.push_back(topping);
+        return *this;
+    }
+    FluentBurger& toasted(bool v = true)
+    {
+        burger_.toasted = v;
+        return *this;
+    }
+    Burger build()
+    {
+        return burger_;
+    }
 
 private:
     Burger burger_;

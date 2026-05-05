@@ -139,9 +139,9 @@ Generator<int> fibonacci()
     while (true)
     {
         co_yield a;
-        int      next = a + b;
-        a             = b;
-        b             = next;
+        int next = a + b;
+        a        = b;
+        b        = next;
     }
 }
 

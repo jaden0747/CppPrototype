@@ -14,30 +14,26 @@ template <typename T>
 concept Numeric = std::is_arithmetic_v<T>;
 
 template <typename T>
-concept Addable = requires(T a, T b)
-{
-    {a + b}->std::convertible_to<T>;
+concept Addable = requires(T a, T b) {
+    { a + b } -> std::convertible_to<T>;
 };
 
 template <typename T>
-concept Printable = requires(std::ostream & os, T val)
-{
-    {os << val}->std::same_as<std::ostream&>;
+concept Printable = requires(std::ostream& os, T val) {
+    { os << val } -> std::same_as<std::ostream&>;
 };
 
 template <typename T>
-concept Container = requires(T c)
-{
+concept Container = requires(T c) {
     c.begin();
     c.end();
-    {c.size()}->std::convertible_to<std::size_t>;
+    { c.size() } -> std::convertible_to<std::size_t>;
     typename T::value_type;
 };
 
 template <typename T>
-concept Hashable = requires(T t)
-{
-    {std::hash<T>{}(t)}->std::convertible_to<std::size_t>;
+concept Hashable = requires(T t) {
+    { std::hash<T>{}(t) } -> std::convertible_to<std::size_t>;
 };
 
 // ──────────────────────────────────────────────────────────────────────────
@@ -46,7 +42,8 @@ concept Hashable = requires(T t)
 
 // Form 1: requires clause
 template <typename T>
-requires Numeric<T> T add_v1(T a, T b)
+    requires Numeric<T>
+T add_v1(T a, T b)
 {
     return a + b;
 }
@@ -60,7 +57,8 @@ T add_v2(T a, T b)
 
 // Form 3: trailing requires
 template <typename T>
-T add_v3(T a, T b) requires Numeric<T>
+T add_v3(T a, T b)
+    requires Numeric<T>
 {
     return a + b;
 }
@@ -75,14 +73,12 @@ auto add_v4(Numeric auto a, Numeric auto b)
 // 3. requires expressions
 // ──────────────────────────────────────────────────────────────────────────
 template <typename T>
-concept Stringifiable = requires(T t)
-{
-    {t.to_string()}->std::convertible_to<std::string>;
+concept Stringifiable = requires(T t) {
+    { t.to_string() } -> std::convertible_to<std::string>;
 };
 
 template <typename T>
-concept SmallTrivial = requires
-{
+concept SmallTrivial = requires {
     requires sizeof(T) <= 16;
     requires std::is_trivially_copyable_v<T>;
 };
@@ -145,7 +141,8 @@ void print_container(const C& c, std::string_view label)
 }
 
 template <Container C>
-requires std::totally_ordered<typename C::value_type> auto find_max(const C& c)
+    requires std::totally_ordered<typename C::value_type>
+auto find_max(const C& c)
 {
     auto it   = c.begin();
     auto best = *it;

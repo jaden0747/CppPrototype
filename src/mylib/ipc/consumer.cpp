@@ -3,7 +3,10 @@
 #include <cerrno>
 #include <cstring>
 
-Consumer::Consumer(IChannel& channel) : m_channel(channel) {}
+Consumer::Consumer(IChannel& channel)
+    : m_channel(channel)
+{
+}
 
 Consumer::~Consumer()
 {

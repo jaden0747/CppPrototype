@@ -70,14 +70,14 @@ public:
     MempoolBuffer<T>* acquire()
     {
         std::lock_guard<std::mutex> lock(m_mu);
-        const int n = static_cast<int>(m_slots.size());
+        const int                   n = static_cast<int>(m_slots.size());
         for (int i = 0; i < n; ++i)
         {
             int idx = (m_ringHead + i) % n;
             if (m_slots[idx].refs.load() == 0)
             {
-                m_ringHead = (idx + 1) % n;   // advance head past this slot
-                m_slots[idx].data = T{};       // reset to default value
+                m_ringHead        = (idx + 1) % n; // advance head past this slot
+                m_slots[idx].data = T{};           // reset to default value
                 m_slots[idx].refs.store(1);
                 return &m_slots[idx];
             }
@@ -299,13 +299,13 @@ public:
         MempoolBuffer<T>* pb = nullptr;
         {
             std::lock_guard<std::mutex> lock(m_mu);
-            sp             = m_sender;
-            m_sender       = nullptr;
-            ab             = m_activeBuf;
-            m_activeBuf    = nullptr;
-            pb             = m_pendingBuf;
-            m_pendingBuf   = nullptr;
-            m_newDataFlag  = false;
+            sp            = m_sender;
+            m_sender      = nullptr;
+            ab            = m_activeBuf;
+            m_activeBuf   = nullptr;
+            pb            = m_pendingBuf;
+            m_pendingBuf  = nullptr;
+            m_newDataFlag = false;
         }
         if (ab)
             ab->pool->release(*ab);
@@ -326,9 +326,9 @@ public:
             std::lock_guard<std::mutex> lock(m_mu);
             if (m_pendingBuf)
             {
-                toRelease    = m_activeBuf;
-                m_activeBuf  = m_pendingBuf;
-                m_pendingBuf = nullptr;
+                toRelease     = m_activeBuf;
+                m_activeBuf   = m_pendingBuf;
+                m_pendingBuf  = nullptr;
                 m_newDataFlag = true;
             }
             else

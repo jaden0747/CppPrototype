@@ -8,8 +8,9 @@
 #include <thread>
 #include <unistd.h>
 
-struct SharedData {
-    int             initialized;   // set to 1 by writer after full init
+struct SharedData
+{
+    int             initialized; // set to 1 by writer after full init
     pthread_mutex_t mutex;
     pthread_cond_t  data_ready;    // signals new data available
     pthread_cond_t  data_consumed; // signals data was consumed
@@ -57,18 +58,21 @@ int main()
 
     // Wait for writer to finish initializing mutex and condvars
     std::cout << "Reader: waiting for writer to initialize..." << std::flush;
-    while (!data->initialized) {
+    while (!data->initialized)
+    {
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
     std::cout << " ready!" << std::endl;
 
     std::cout << "Reader: using condition variables..." << std::flush;
-    while (true) {
+    while (true)
+    {
         pthread_mutex_lock(&data->mutex);
 
         // Wait for writer to signal new data
-        while (!data->has_data) {
-            std::cout << "." << std::flush;  // Progress indicator
+        while (!data->has_data)
+        {
+            std::cout << "." << std::flush; // Progress indicator
             pthread_cond_wait(&data->data_ready, &data->mutex);
         }
 

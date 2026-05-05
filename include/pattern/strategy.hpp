@@ -1,9 +1,9 @@
 #pragma once
-#include <string>
-#include <vector>
 #include <algorithm>
 #include <functional>
 #include <memory>
+#include <string>
+#include <vector>
 
 // ---------------------------------------------------------------------------
 // Strategy Pattern
@@ -28,16 +28,17 @@
 //  - You need different variants of an algorithm.
 // ---------------------------------------------------------------------------
 
-namespace pattern {
+namespace pattern
+{
 
 // ---------- Strategy interface -------------------------------------------
 
 class ISortStrategy
 {
 public:
-    virtual ~ISortStrategy() = default;
-    virtual void sort(std::vector<int>& data) const = 0;
-    virtual std::string name() const = 0;
+    virtual ~ISortStrategy()                               = default;
+    virtual void        sort(std::vector<int>& data) const = 0;
+    virtual std::string name() const                       = 0;
 };
 
 // ---------- Concrete Strategies ------------------------------------------
@@ -49,9 +50,13 @@ public:
     {
         for (std::size_t i = 0; i + 1 < data.size(); ++i)
             for (std::size_t j = 0; j + 1 < data.size() - i; ++j)
-                if (data[j] > data[j + 1]) std::swap(data[j], data[j + 1]);
+                if (data[j] > data[j + 1])
+                    std::swap(data[j], data[j + 1]);
     }
-    std::string name() const override { return "BubbleSort"; }
+    std::string name() const override
+    {
+        return "BubbleSort";
+    }
 };
 
 class QuickSort : public ISortStrategy
@@ -61,7 +66,10 @@ public:
     {
         std::sort(data.begin(), data.end());
     }
-    std::string name() const override { return "QuickSort"; }
+    std::string name() const override
+    {
+        return "QuickSort";
+    }
 };
 
 class ReverseSort : public ISortStrategy
@@ -71,7 +79,10 @@ public:
     {
         std::sort(data.rbegin(), data.rend());
     }
-    std::string name() const override { return "ReverseSort"; }
+    std::string name() const override
+    {
+        return "ReverseSort";
+    }
 };
 
 // ---------- Context -------------------------------------------------------
@@ -80,7 +91,9 @@ class Sorter
 {
 public:
     explicit Sorter(std::unique_ptr<ISortStrategy> strategy)
-        : strategy_(std::move(strategy)) {}
+        : strategy_(std::move(strategy))
+    {
+    }
 
     void setStrategy(std::unique_ptr<ISortStrategy> strategy)
     {
@@ -92,7 +105,10 @@ public:
         strategy_->sort(data);
     }
 
-    std::string strategyName() const { return strategy_->name(); }
+    std::string strategyName() const
+    {
+        return strategy_->name();
+    }
 
 private:
     std::unique_ptr<ISortStrategy> strategy_;
@@ -105,10 +121,19 @@ class FunctionalSorter
 public:
     using Strategy = std::function<void(std::vector<int>&)>;
 
-    explicit FunctionalSorter(Strategy s) : strategy_(std::move(s)) {}
+    explicit FunctionalSorter(Strategy s)
+        : strategy_(std::move(s))
+    {
+    }
 
-    void setStrategy(Strategy s) { strategy_ = std::move(s); }
-    void sort(std::vector<int>& data) const { strategy_(data); }
+    void setStrategy(Strategy s)
+    {
+        strategy_ = std::move(s);
+    }
+    void sort(std::vector<int>& data) const
+    {
+        strategy_(data);
+    }
 
 private:
     Strategy strategy_;
@@ -116,8 +141,17 @@ private:
 
 // ---------- Convenience factory helpers ----------------------------------
 
-inline std::unique_ptr<ISortStrategy> makeBubbleSort()  { return std::unique_ptr<ISortStrategy>(new BubbleSort()); }
-inline std::unique_ptr<ISortStrategy> makeQuickSort()   { return std::unique_ptr<ISortStrategy>(new QuickSort()); }
-inline std::unique_ptr<ISortStrategy> makeReverseSort() { return std::unique_ptr<ISortStrategy>(new ReverseSort()); }
+inline std::unique_ptr<ISortStrategy> makeBubbleSort()
+{
+    return std::unique_ptr<ISortStrategy>(new BubbleSort());
+}
+inline std::unique_ptr<ISortStrategy> makeQuickSort()
+{
+    return std::unique_ptr<ISortStrategy>(new QuickSort());
+}
+inline std::unique_ptr<ISortStrategy> makeReverseSort()
+{
+    return std::unique_ptr<ISortStrategy>(new ReverseSort());
+}
 
 } // namespace pattern

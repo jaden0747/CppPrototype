@@ -1,7 +1,7 @@
 #pragma once
 #include <memory>
-#include <string>
 #include <stdexcept>
+#include <string>
 
 // ---------------------------------------------------------------------------
 // Abstract Factory Pattern
@@ -27,14 +27,15 @@
 //    (e.g. all products must belong to the same theme/platform).
 // ---------------------------------------------------------------------------
 
-namespace pattern {
+namespace pattern
+{
 
 // ---------- Product interfaces -------------------------------------------
 
 class Chair
 {
 public:
-    virtual ~Chair() = default;
+    virtual ~Chair()                  = default;
     virtual std::string sitOn() const = 0;
     virtual std::string style() const = 0;
 };
@@ -42,7 +43,7 @@ public:
 class Sofa
 {
 public:
-    virtual ~Sofa() = default;
+    virtual ~Sofa()                   = default;
     virtual std::string lieOn() const = 0;
     virtual std::string style() const = 0;
 };
@@ -50,7 +51,7 @@ public:
 class CoffeeTable
 {
 public:
-    virtual ~CoffeeTable() = default;
+    virtual ~CoffeeTable()            = default;
     virtual std::string putOn() const = 0;
     virtual std::string style() const = 0;
 };
@@ -60,22 +61,40 @@ public:
 class ModernChair : public Chair
 {
 public:
-    std::string sitOn() const override { return "Sitting on a sleek modern chair"; }
-    std::string style() const override { return "Modern"; }
+    std::string sitOn() const override
+    {
+        return "Sitting on a sleek modern chair";
+    }
+    std::string style() const override
+    {
+        return "Modern";
+    }
 };
 
 class ModernSofa : public Sofa
 {
 public:
-    std::string lieOn() const override { return "Lying on a minimalist modern sofa"; }
-    std::string style() const override { return "Modern"; }
+    std::string lieOn() const override
+    {
+        return "Lying on a minimalist modern sofa";
+    }
+    std::string style() const override
+    {
+        return "Modern";
+    }
 };
 
 class ModernCoffeeTable : public CoffeeTable
 {
 public:
-    std::string putOn() const override { return "Placing items on a glass modern table"; }
-    std::string style() const override { return "Modern"; }
+    std::string putOn() const override
+    {
+        return "Placing items on a glass modern table";
+    }
+    std::string style() const override
+    {
+        return "Modern";
+    }
 };
 
 // ---------- Victorian family ---------------------------------------------
@@ -83,22 +102,40 @@ public:
 class VictorianChair : public Chair
 {
 public:
-    std::string sitOn() const override { return "Sitting on an ornate Victorian chair"; }
-    std::string style() const override { return "Victorian"; }
+    std::string sitOn() const override
+    {
+        return "Sitting on an ornate Victorian chair";
+    }
+    std::string style() const override
+    {
+        return "Victorian";
+    }
 };
 
 class VictorianSofa : public Sofa
 {
 public:
-    std::string lieOn() const override { return "Lying on a velvet Victorian sofa"; }
-    std::string style() const override { return "Victorian"; }
+    std::string lieOn() const override
+    {
+        return "Lying on a velvet Victorian sofa";
+    }
+    std::string style() const override
+    {
+        return "Victorian";
+    }
 };
 
 class VictorianCoffeeTable : public CoffeeTable
 {
 public:
-    std::string putOn() const override { return "Placing items on a carved Victorian table"; }
-    std::string style() const override { return "Victorian"; }
+    std::string putOn() const override
+    {
+        return "Placing items on a carved Victorian table";
+    }
+    std::string style() const override
+    {
+        return "Victorian";
+    }
 };
 
 // ---------- Abstract factory interface -----------------------------------
@@ -106,9 +143,9 @@ public:
 class FurnitureFactory
 {
 public:
-    virtual ~FurnitureFactory() = default;
-    virtual std::unique_ptr<Chair>       createChair()       const = 0;
-    virtual std::unique_ptr<Sofa>        createSofa()        const = 0;
+    virtual ~FurnitureFactory()                                    = default;
+    virtual std::unique_ptr<Chair>       createChair() const       = 0;
+    virtual std::unique_ptr<Sofa>        createSofa() const        = 0;
     virtual std::unique_ptr<CoffeeTable> createCoffeeTable() const = 0;
 };
 
@@ -117,25 +154,45 @@ public:
 class ModernFurnitureFactory : public FurnitureFactory
 {
 public:
-    std::unique_ptr<Chair>       createChair()       const override { return std::unique_ptr<Chair>(new ModernChair()); }
-    std::unique_ptr<Sofa>        createSofa()        const override { return std::unique_ptr<Sofa>(new ModernSofa()); }
-    std::unique_ptr<CoffeeTable> createCoffeeTable() const override { return std::unique_ptr<CoffeeTable>(new ModernCoffeeTable()); }
+    std::unique_ptr<Chair> createChair() const override
+    {
+        return std::unique_ptr<Chair>(new ModernChair());
+    }
+    std::unique_ptr<Sofa> createSofa() const override
+    {
+        return std::unique_ptr<Sofa>(new ModernSofa());
+    }
+    std::unique_ptr<CoffeeTable> createCoffeeTable() const override
+    {
+        return std::unique_ptr<CoffeeTable>(new ModernCoffeeTable());
+    }
 };
 
 class VictorianFurnitureFactory : public FurnitureFactory
 {
 public:
-    std::unique_ptr<Chair>       createChair()       const override { return std::unique_ptr<Chair>(new VictorianChair()); }
-    std::unique_ptr<Sofa>        createSofa()        const override { return std::unique_ptr<Sofa>(new VictorianSofa()); }
-    std::unique_ptr<CoffeeTable> createCoffeeTable() const override { return std::unique_ptr<CoffeeTable>(new VictorianCoffeeTable()); }
+    std::unique_ptr<Chair> createChair() const override
+    {
+        return std::unique_ptr<Chair>(new VictorianChair());
+    }
+    std::unique_ptr<Sofa> createSofa() const override
+    {
+        return std::unique_ptr<Sofa>(new VictorianSofa());
+    }
+    std::unique_ptr<CoffeeTable> createCoffeeTable() const override
+    {
+        return std::unique_ptr<CoffeeTable>(new VictorianCoffeeTable());
+    }
 };
 
 // ---------- Helper -------------------------------------------------------
 
 inline std::unique_ptr<FurnitureFactory> makeFurnitureFactory(const std::string& style)
 {
-    if (style == "modern")   return std::unique_ptr<FurnitureFactory>(new ModernFurnitureFactory());
-    if (style == "victorian") return std::unique_ptr<FurnitureFactory>(new VictorianFurnitureFactory());
+    if (style == "modern")
+        return std::unique_ptr<FurnitureFactory>(new ModernFurnitureFactory());
+    if (style == "victorian")
+        return std::unique_ptr<FurnitureFactory>(new VictorianFurnitureFactory());
     throw std::invalid_argument("Unknown furniture style: " + style);
 }
 

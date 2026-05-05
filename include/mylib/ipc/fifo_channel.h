@@ -15,16 +15,16 @@ class FifoChannel final : public IChannel
 public:
     explicit FifoChannel(std::string path);
 
-    void create()  override;
+    void create() override;
     void destroy() override;
 
-    bool    openWriter()                      override;
-    ssize_t write(const void* buf, size_t n)  override;
-    void    closeWriter()                     override;
+    bool    openWriter() override;
+    ssize_t write(const void* buf, size_t n) override;
+    void    closeWriter() override;
 
-    bool    openReader()                      override;
-    ssize_t tryRead(void* buf, size_t n)      override;
-    void    closeReader()                     override;
+    bool    openReader() override;
+    ssize_t tryRead(void* buf, size_t n) override;
+    void    closeReader() override;
 
 private:
     std::string m_path;

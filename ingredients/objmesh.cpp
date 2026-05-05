@@ -18,10 +18,10 @@ using std::istringstream;
 
 #ifdef _WIN32
 #ifdef max
-    #undef max
+#undef max
 #endif
 #ifdef min
-    #undef min
+#undef min
 #endif
 #endif
 

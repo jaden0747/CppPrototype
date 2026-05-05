@@ -1,8 +1,8 @@
 #pragma once
+#include <algorithm>
 #include <memory>
 #include <string>
 #include <vector>
-#include <algorithm>
 
 // ---------------------------------------------------------------------------
 // Mediator Pattern
@@ -28,7 +28,8 @@
 //    centralisation (think: form validation, GUI widget coordination).
 // ---------------------------------------------------------------------------
 
-namespace pattern {
+namespace pattern
+{
 
 class Component;
 
@@ -37,7 +38,7 @@ class Component;
 class Mediator
 {
 public:
-    virtual ~Mediator() = default;
+    virtual ~Mediator()                                              = default;
     virtual void notify(Component* sender, const std::string& event) = 0;
 };
 
@@ -46,16 +47,27 @@ public:
 class Component
 {
 public:
-    explicit Component(const std::string& name) : name_(name), mediator_(nullptr) {}
+    explicit Component(const std::string& name)
+        : name_(name)
+        , mediator_(nullptr)
+    {
+    }
     virtual ~Component() = default;
 
-    void setMediator(Mediator* m) { mediator_ = m; }
-    const std::string& name() const { return name_; }
+    void setMediator(Mediator* m)
+    {
+        mediator_ = m;
+    }
+    const std::string& name() const
+    {
+        return name_;
+    }
 
 protected:
     void trigger(const std::string& event)
     {
-        if (mediator_) mediator_->notify(this, event);
+        if (mediator_)
+            mediator_->notify(this, event);
     }
 
     std::string name_;
@@ -67,7 +79,10 @@ protected:
 class ChatUser : public Component
 {
 public:
-    explicit ChatUser(const std::string& name) : Component(name) {}
+    explicit ChatUser(const std::string& name)
+        : Component(name)
+    {
+    }
 
     void send(const std::string& message)
     {
@@ -80,13 +95,22 @@ public:
         inbox_.push_back("[" + from + "]: " + message);
     }
 
-    const std::string& lastSent()               const { return lastSent_; }
-    const std::vector<std::string>& inbox()     const { return inbox_; }
-    void clearInbox()                                 { inbox_.clear(); }
+    const std::string& lastSent() const
+    {
+        return lastSent_;
+    }
+    const std::vector<std::string>& inbox() const
+    {
+        return inbox_;
+    }
+    void clearInbox()
+    {
+        inbox_.clear();
+    }
 
 private:
-    std::string               lastSent_;
-    std::vector<std::string>  inbox_;
+    std::string              lastSent_;
+    std::vector<std::string> inbox_;
 };
 
 // ---------- Concrete Mediator (chat room) --------------------------------
@@ -104,10 +128,11 @@ public:
     {
         // parse "message:<text>"
         const std::string prefix = "message:";
-        if (event.rfind(prefix, 0) != 0) return;
+        if (event.rfind(prefix, 0) != 0)
+            return;
 
-        std::string text = event.substr(prefix.size());
-        ChatUser* fromUser = static_cast<ChatUser*>(sender);
+        std::string text     = event.substr(prefix.size());
+        ChatUser*   fromUser = static_cast<ChatUser*>(sender);
 
         for (auto* u : users_)
         {
@@ -116,7 +141,10 @@ public:
         }
     }
 
-    std::size_t userCount() const { return users_.size(); }
+    std::size_t userCount() const
+    {
+        return users_.size();
+    }
 
 private:
     std::vector<ChatUser*> users_;

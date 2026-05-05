@@ -18,6 +18,5 @@ struct AppConfig
     bool        fullscreen   = false;
     float       targetFps    = 60.0f;
 
-    NLOHMANN_DEFINE_TYPE_INTRUSIVE(AppConfig,
-        appName, windowWidth, windowHeight, fullscreen, targetFps)
+    NLOHMANN_DEFINE_TYPE_INTRUSIVE(AppConfig, appName, windowWidth, windowHeight, fullscreen, targetFps)
 };

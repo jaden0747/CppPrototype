@@ -1,13 +1,13 @@
 #ifndef IMGUI_SCENE_H
 #define IMGUI_SCENE_H
 
-#include "scene.h"
 #include "cookbookogl.h"
+#include "scene.h"
 
 class ImGuiScene : public Scene
 {
 public:
-    ImGuiScene() = default;
+    ImGuiScene()           = default;
     ~ImGuiScene() override = default;
 
     void initScene() override;
@@ -16,7 +16,9 @@ public:
     // void resize(int, int) override;
 
     // Called inside the ImGui frame, before Render(). Override in subclasses to add widgets.
-    virtual void renderImGuiWidgets() {}
+    virtual void renderImGuiWidgets()
+    {
+    }
 };
 
 #endif // IMGUI_SCENE_H

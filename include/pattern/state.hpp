@@ -1,7 +1,7 @@
 #pragma once
-#include <string>
-#include <stdexcept>
 #include <memory>
+#include <stdexcept>
+#include <string>
 
 // ---------------------------------------------------------------------------
 // State Pattern
@@ -25,20 +25,21 @@
 //    object's state (replace with polymorphism).
 // ---------------------------------------------------------------------------
 
-namespace pattern {
+namespace pattern
+{
 
-class VendingMachine;  // forward declaration
+class VendingMachine; // forward declaration
 
 // ---------- State interface ----------------------------------------------
 
 class VendingState
 {
 public:
-    virtual ~VendingState() = default;
-    virtual void insertCoin(VendingMachine& vm)   = 0;
-    virtual void selectProduct(VendingMachine& vm) = 0;
-    virtual void dispense(VendingMachine& vm)      = 0;
-    virtual std::string name() const               = 0;
+    virtual ~VendingState()                               = default;
+    virtual void        insertCoin(VendingMachine& vm)    = 0;
+    virtual void        selectProduct(VendingMachine& vm) = 0;
+    virtual void        dispense(VendingMachine& vm)      = 0;
+    virtual std::string name() const                      = 0;
 };
 
 // ---------- Concrete States ----------------------------------------------
@@ -46,37 +47,49 @@ public:
 class IdleState : public VendingState
 {
 public:
-    void insertCoin(VendingMachine& vm) override;
-    void selectProduct(VendingMachine& vm) override;
-    void dispense(VendingMachine& vm) override;
-    std::string name() const override { return "Idle"; }
+    void        insertCoin(VendingMachine& vm) override;
+    void        selectProduct(VendingMachine& vm) override;
+    void        dispense(VendingMachine& vm) override;
+    std::string name() const override
+    {
+        return "Idle";
+    }
 };
 
 class HasCoinState : public VendingState
 {
 public:
-    void insertCoin(VendingMachine& vm) override;
-    void selectProduct(VendingMachine& vm) override;
-    void dispense(VendingMachine& vm) override;
-    std::string name() const override { return "HasCoin"; }
+    void        insertCoin(VendingMachine& vm) override;
+    void        selectProduct(VendingMachine& vm) override;
+    void        dispense(VendingMachine& vm) override;
+    std::string name() const override
+    {
+        return "HasCoin";
+    }
 };
 
 class DispensingState : public VendingState
 {
 public:
-    void insertCoin(VendingMachine& vm) override;
-    void selectProduct(VendingMachine& vm) override;
-    void dispense(VendingMachine& vm) override;
-    std::string name() const override { return "Dispensing"; }
+    void        insertCoin(VendingMachine& vm) override;
+    void        selectProduct(VendingMachine& vm) override;
+    void        dispense(VendingMachine& vm) override;
+    std::string name() const override
+    {
+        return "Dispensing";
+    }
 };
 
 class OutOfStockState : public VendingState
 {
 public:
-    void insertCoin(VendingMachine& vm) override;
-    void selectProduct(VendingMachine& vm) override;
-    void dispense(VendingMachine& vm) override;
-    std::string name() const override { return "OutOfStock"; }
+    void        insertCoin(VendingMachine& vm) override;
+    void        selectProduct(VendingMachine& vm) override;
+    void        dispense(VendingMachine& vm) override;
+    std::string name() const override
+    {
+        return "OutOfStock";
+    }
 };
 
 // ---------- Context -------------------------------------------------------
@@ -93,20 +106,42 @@ public:
             setState(std::unique_ptr<VendingState>(new OutOfStockState()));
     }
 
-    void setState(std::unique_ptr<VendingState> s) { state_ = std::move(s); }
+    void setState(std::unique_ptr<VendingState> s)
+    {
+        state_ = std::move(s);
+    }
 
-    void insertCoin()    { state_->insertCoin(*this); }
-    void selectProduct() { state_->selectProduct(*this); }
-    void dispense()      { state_->dispense(*this); }
+    void insertCoin()
+    {
+        state_->insertCoin(*this);
+    }
+    void selectProduct()
+    {
+        state_->selectProduct(*this);
+    }
+    void dispense()
+    {
+        state_->dispense(*this);
+    }
 
-    std::string stateName() const { return state_->name(); }
+    std::string stateName() const
+    {
+        return state_->name();
+    }
 
-    int  stock() const     { return stock_; }
-    void decreaseStock()   { if (stock_ > 0) --stock_; }
+    int stock() const
+    {
+        return stock_;
+    }
+    void decreaseStock()
+    {
+        if (stock_ > 0)
+            --stock_;
+    }
 
 private:
     std::unique_ptr<VendingState> state_;
-    int stock_;
+    int                           stock_;
 };
 
 // ---------- State implementations ----------------------------------------

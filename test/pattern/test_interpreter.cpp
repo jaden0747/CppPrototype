@@ -1,5 +1,5 @@
-#include <gtest/gtest.h>
 #include "pattern/interpreter.hpp"
+#include <gtest/gtest.h>
 
 using namespace pattern;
 
@@ -59,16 +59,14 @@ TEST(Interpreter, NotFalse)
 TEST(Interpreter, AndTrueTrue)
 {
     Context ctx;
-    AndExpr a(std::unique_ptr<BoolExpr>(new Literal(true)),
-              std::unique_ptr<BoolExpr>(new Literal(true)));
+    AndExpr a(std::unique_ptr<BoolExpr>(new Literal(true)), std::unique_ptr<BoolExpr>(new Literal(true)));
     EXPECT_TRUE(a.interpret(ctx));
 }
 
 TEST(Interpreter, AndTrueFalse)
 {
     Context ctx;
-    AndExpr a(std::unique_ptr<BoolExpr>(new Literal(true)),
-              std::unique_ptr<BoolExpr>(new Literal(false)));
+    AndExpr a(std::unique_ptr<BoolExpr>(new Literal(true)), std::unique_ptr<BoolExpr>(new Literal(false)));
     EXPECT_FALSE(a.interpret(ctx));
 }
 
@@ -78,16 +76,14 @@ TEST(Interpreter, AndTrueFalse)
 TEST(Interpreter, OrFalseTrue)
 {
     Context ctx;
-    OrExpr o(std::unique_ptr<BoolExpr>(new Literal(false)),
-             std::unique_ptr<BoolExpr>(new Literal(true)));
+    OrExpr  o(std::unique_ptr<BoolExpr>(new Literal(false)), std::unique_ptr<BoolExpr>(new Literal(true)));
     EXPECT_TRUE(o.interpret(ctx));
 }
 
 TEST(Interpreter, OrFalseFalse)
 {
     Context ctx;
-    OrExpr o(std::unique_ptr<BoolExpr>(new Literal(false)),
-             std::unique_ptr<BoolExpr>(new Literal(false)));
+    OrExpr  o(std::unique_ptr<BoolExpr>(new Literal(false)), std::unique_ptr<BoolExpr>(new Literal(false)));
     EXPECT_FALSE(o.interpret(ctx));
 }
 
@@ -103,8 +99,8 @@ TEST(Interpreter, CompoundExpression)
     auto yVar = std::unique_ptr<BoolExpr>(new Variable("y"));
     auto zVar = std::unique_ptr<BoolExpr>(new Variable("z"));
 
-    auto xAndY = std::unique_ptr<BoolExpr>(new AndExpr(std::move(xVar), std::move(yVar)));
-    auto notZ  = std::unique_ptr<BoolExpr>(new NotExpr(std::move(zVar)));
+    auto   xAndY = std::unique_ptr<BoolExpr>(new AndExpr(std::move(xVar), std::move(yVar)));
+    auto   notZ  = std::unique_ptr<BoolExpr>(new NotExpr(std::move(zVar)));
     OrExpr expr(std::move(xAndY), std::move(notZ));
 
     // x=T, y=F: xAndY=F; z=F, notZ=T → F OR T = true
@@ -116,10 +112,8 @@ TEST(Interpreter, CompoundExpressionAllFalse)
     Context ctx{{"x", false}, {"y", false}, {"z", true}};
 
     auto xAndY = std::unique_ptr<BoolExpr>(
-        new AndExpr(std::unique_ptr<BoolExpr>(new Variable("x")),
-                    std::unique_ptr<BoolExpr>(new Variable("y"))));
-    auto notZ = std::unique_ptr<BoolExpr>(
-        new NotExpr(std::unique_ptr<BoolExpr>(new Variable("z"))));
+        new AndExpr(std::unique_ptr<BoolExpr>(new Variable("x")), std::unique_ptr<BoolExpr>(new Variable("y"))));
+    auto   notZ = std::unique_ptr<BoolExpr>(new NotExpr(std::unique_ptr<BoolExpr>(new Variable("z"))));
     OrExpr expr(std::move(xAndY), std::move(notZ));
 
     // F AND F = F; NOT T = F → F OR F = false

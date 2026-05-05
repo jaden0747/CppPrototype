@@ -1,5 +1,5 @@
-#include <gtest/gtest.h>
 #include "pattern/flyweight.hpp"
+#include <gtest/gtest.h>
 
 using namespace pattern;
 
@@ -14,7 +14,7 @@ TEST(Flyweight, TreeTypeStoresName)
 
 TEST(Flyweight, TreeTypeRenderContainsCoords)
 {
-    TreeType t("Oak", "green", "rough");
+    TreeType    t("Oak", "green", "rough");
     std::string result = t.render(10, 20);
     EXPECT_NE(std::string::npos, result.find("10"));
     EXPECT_NE(std::string::npos, result.find("20"));
@@ -26,27 +26,27 @@ TEST(Flyweight, TreeTypeRenderContainsCoords)
 TEST(Flyweight, FactoryReturnsSameInstanceForSameKey)
 {
     TreeTypeFactory factory;
-    auto a = factory.getTreeType("Oak", "green", "rough");
-    auto b = factory.getTreeType("Oak", "green", "rough");
+    auto            a = factory.getTreeType("Oak", "green", "rough");
+    auto            b = factory.getTreeType("Oak", "green", "rough");
     EXPECT_EQ(a.get(), b.get());
 }
 
 TEST(Flyweight, FactoryReturnsDifferentInstanceForDifferentKey)
 {
     TreeTypeFactory factory;
-    auto a = factory.getTreeType("Oak",  "green",  "rough");
-    auto b = factory.getTreeType("Pine", "yellow", "smooth");
+    auto            a = factory.getTreeType("Oak", "green", "rough");
+    auto            b = factory.getTreeType("Pine", "yellow", "smooth");
     EXPECT_NE(a.get(), b.get());
 }
 
 TEST(Flyweight, FactoryCacheSizeGrowsForNewTypes)
 {
     TreeTypeFactory factory;
-    factory.getTreeType("Oak",  "green",  "rough");
+    factory.getTreeType("Oak", "green", "rough");
     EXPECT_EQ(1u, factory.cacheSize());
     factory.getTreeType("Pine", "yellow", "smooth");
     EXPECT_EQ(2u, factory.cacheSize());
-    factory.getTreeType("Oak",  "green",  "rough");  // duplicate
+    factory.getTreeType("Oak", "green", "rough"); // duplicate
     EXPECT_EQ(2u, factory.cacheSize());
 }
 
@@ -56,8 +56,8 @@ TEST(Flyweight, FactoryCacheSizeGrowsForNewTypes)
 TEST(Flyweight, ForestTracksAllTrees)
 {
     Forest f;
-    f.plantTree(0, 0, "Oak",  "green",  "rough");
-    f.plantTree(1, 2, "Oak",  "green",  "rough");
+    f.plantTree(0, 0, "Oak", "green", "rough");
+    f.plantTree(1, 2, "Oak", "green", "rough");
     f.plantTree(3, 4, "Pine", "yellow", "smooth");
     EXPECT_EQ(3u, f.treeCount());
 }
@@ -68,16 +68,18 @@ TEST(Flyweight, ForestDeduplicatesTypes)
     for (int i = 0; i < 100; ++i)
         f.plantTree(i, i, "Oak", "green", "rough");
     EXPECT_EQ(100u, f.treeCount());
-    EXPECT_EQ(1u,   f.uniqueTypeCount());  // only one TreeType created
+    EXPECT_EQ(1u, f.uniqueTypeCount()); // only one TreeType created
 }
 
 TEST(Flyweight, ForestMultipleTypesDeduplication)
 {
     Forest f;
-    for (int i = 0; i < 50; ++i) f.plantTree(i, 0, "Oak",  "green",  "rough");
-    for (int i = 0; i < 50; ++i) f.plantTree(i, 1, "Pine", "yellow", "smooth");
+    for (int i = 0; i < 50; ++i)
+        f.plantTree(i, 0, "Oak", "green", "rough");
+    for (int i = 0; i < 50; ++i)
+        f.plantTree(i, 1, "Pine", "yellow", "smooth");
     EXPECT_EQ(100u, f.treeCount());
-    EXPECT_EQ(2u,   f.uniqueTypeCount());
+    EXPECT_EQ(2u, f.uniqueTypeCount());
 }
 
 TEST(Flyweight, TreeContextRenderContainsPosition)

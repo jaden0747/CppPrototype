@@ -1,8 +1,8 @@
 #pragma once
 
+#include "settings/settings_item.hpp"
 #include <nlohmann/json.hpp>
 #include <string>
-#include "settings/settings_item.hpp"
 
 // ---------------------------------------------------------------------------
 // AppConfig
@@ -17,8 +17,7 @@ struct AppConfig
     int         windowWidth  = 1280;
     int         windowHeight = 720;
 
-    NLOHMANN_DEFINE_TYPE_INTRUSIVE(AppConfig,
-        appName, windowWidth, windowHeight)
+    NLOHMANN_DEFINE_TYPE_INTRUSIVE(AppConfig, appName, windowWidth, windowHeight)
 };
 
 extern SettingsItem<AppConfig> g_appConfig;

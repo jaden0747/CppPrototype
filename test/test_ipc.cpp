@@ -49,8 +49,7 @@
 // Unique FIFO paths per process so parallel test runs don't collide.
 // Each test fixture appends a suffix to isolate its own OS resource.
 // ---------------------------------------------------------------------------
-static const std::string kBase =
-    "/tmp/gtest_ipc_" + std::to_string(static_cast<long>(::getpid()));
+static const std::string kBase = "/tmp/gtest_ipc_" + std::to_string(static_cast<long>(::getpid()));
 
 // ---------------------------------------------------------------------------
 // MockChannel — fulfils IChannel without touching the filesystem.
@@ -60,18 +59,40 @@ static const std::string kBase =
 class MockChannel final : public IChannel
 {
 public:
-    void enqueue(std::string chunk) { m_chunks.push(std::move(chunk)); }
+    void enqueue(std::string chunk)
+    {
+        m_chunks.push(std::move(chunk));
+    }
 
-    void    create()  override {}
-    void    destroy() override {}
-    bool    openWriter()                    override { return true; }
-    ssize_t write(const void*, size_t n)    override { return static_cast<ssize_t>(n); }
-    void    closeWriter()                   override {}
-    bool    openReader()                    override { return true; }
+    void create() override
+    {
+    }
+    void destroy() override
+    {
+    }
+    bool openWriter() override
+    {
+        return true;
+    }
+    ssize_t write(const void*, size_t n) override
+    {
+        return static_cast<ssize_t>(n);
+    }
+    void closeWriter() override
+    {
+    }
+    bool openReader() override
+    {
+        return true;
+    }
 
     ssize_t tryRead(void* buf, size_t n) override
     {
-        if (m_chunks.empty()) { errno = EAGAIN; return -1; }
+        if (m_chunks.empty())
+        {
+            errno = EAGAIN;
+            return -1;
+        }
         const auto& chunk = m_chunks.front();
         size_t      count = std::min(n, chunk.size());
         std::memcpy(buf, chunk.data(), count);
@@ -79,7 +100,9 @@ public:
         return static_cast<ssize_t>(count);
     }
 
-    void closeReader() override {}
+    void closeReader() override
+    {
+    }
 
 private:
     std::queue<std::string> m_chunks;
@@ -131,11 +154,11 @@ TEST(Consumer, DrainMultipleCompleteLinesSingleChunk)
 TEST(Consumer, PartialLineHeldUntilNewlineArrives)
 {
     MockChannel mc;
-    mc.enqueue("partial");   // no newline
+    mc.enqueue("partial"); // no newline
     Consumer c{mc};
     c.open();
 
-    EXPECT_TRUE(c.drain().empty());   // buffered — not yet emitted
+    EXPECT_TRUE(c.drain().empty()); // buffered — not yet emitted
 
     mc.enqueue(" done\n");
     auto lines = c.drain();
@@ -194,8 +217,15 @@ struct FifoChannelTest : ::testing::Test
     const std::string path = kBase + "_fc";
     FifoChannel       ch{path};
 
-    void SetUp()    override { signal(SIGPIPE, SIG_IGN); ch.create(); }
-    void TearDown() override { ch.destroy(); }   // idempotent — safe even if test already destroyed
+    void SetUp() override
+    {
+        signal(SIGPIPE, SIG_IGN);
+        ch.create();
+    }
+    void TearDown() override
+    {
+        ch.destroy();
+    } // idempotent — safe even if test already destroyed
 
     // Opens both ends without blocking: reader first (O_NONBLOCK), then writer.
     // After this returns, both file descriptors are valid.
@@ -221,7 +251,7 @@ TEST_F(FifoChannelTest, DestroyRemovesFilesystemEntryAndIsIdempotent)
     struct stat st;
     EXPECT_NE(::stat(path.c_str(), &st), 0) << "FIFO should be gone after destroy()";
 
-    ch.destroy();  // second call — must not crash (NFR-3)
+    ch.destroy(); // second call — must not crash (NFR-3)
 }
 
 // FR-4: openReader() with O_NONBLOCK must return immediately even if no writer
@@ -230,8 +260,7 @@ TEST_F(FifoChannelTest, OpenReaderDoesNotBlockWithNoWriter)
 {
     auto t0 = std::chrono::steady_clock::now();
     ASSERT_TRUE(ch.openReader());
-    auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-                  std::chrono::steady_clock::now() - t0).count();
+    auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - t0).count();
     EXPECT_LT(ms, 50) << "openReader() should return immediately with O_NONBLOCK";
     ch.closeReader();
 }
@@ -291,8 +320,8 @@ TEST_F(FifoChannelTest, MultipleWritesArrivedInOrder)
 TEST_F(FifoChannelTest, CreateHandlesPreexistingFifo)
 {
     ch.destroy();
-    ::mkfifo(path.c_str(), 0666);   // leave a stale FIFO
-    ch.create();                     // must not fail
+    ::mkfifo(path.c_str(), 0666); // leave a stale FIFO
+    ch.create();                  // must not fail
 
     struct stat st;
     ASSERT_EQ(::stat(path.c_str(), &st), 0);
@@ -304,9 +333,9 @@ TEST_F(FifoChannelTest, CreateHandlesPreexistingFifo)
 TEST_F(FifoChannelTest, CloseReaderCausesEPIPEOnWrite)
 {
     openBothEnds();
-    ch.closeReader();   // no readers — next write should fail
+    ch.closeReader(); // no readers — next write should fail
 
-    const char buf[] = "x";
+    const char buf[]  = "x";
     ssize_t    result = ch.write(buf, 1);
     EXPECT_EQ(result, -1);
     EXPECT_EQ(errno, EPIPE);
@@ -329,13 +358,12 @@ struct ProducerTest : ::testing::Test
         // Consumer (test) opens read end first so the producer's openWriter()
         // returns immediately when the thread starts.
         ASSERT_TRUE(ch.openReader());
-        producer = std::make_unique<Producer>(
-            ch, Producer::sensorSource(), std::chrono::milliseconds{50});
+        producer = std::make_unique<Producer>(ch, Producer::sensorSource(), std::chrono::milliseconds{50});
     }
 
     void TearDown() override
     {
-        producer.reset();   // stop() is called in destructor
+        producer.reset(); // stop() is called in destructor
         ch.destroy();
     }
 };
@@ -353,7 +381,7 @@ TEST_F(ProducerTest, StopIsIdempotent)
 {
     producer->start();
     producer->stop();
-    producer->stop();   // second call must not deadlock or crash
+    producer->stop(); // second call must not deadlock or crash
     SUCCEED();
 }
 
@@ -362,12 +390,11 @@ TEST_F(ProducerTest, StopIsIdempotent)
 TEST_F(ProducerTest, StopCompletesWithinBoundedTime)
 {
     producer->start();
-    std::this_thread::sleep_for(std::chrono::milliseconds{80});   // let it run
+    std::this_thread::sleep_for(std::chrono::milliseconds{80}); // let it run
 
     auto t0 = std::chrono::steady_clock::now();
     producer->stop();
-    auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-                  std::chrono::steady_clock::now() - t0).count();
+    auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - t0).count();
 
     // Interval is 50 ms; with cv notification, stop should complete < 200 ms
     // even on a loaded CI machine.
@@ -378,7 +405,7 @@ TEST_F(ProducerTest, StopCompletesWithinBoundedTime)
 TEST_F(ProducerTest, WritesAtLeastOneMessageAfterStart)
 {
     producer->start();
-    std::this_thread::sleep_for(std::chrono::milliseconds{150});  // > 2 × 50 ms
+    std::this_thread::sleep_for(std::chrono::milliseconds{150}); // > 2 × 50 ms
 
     char    buf[4096] = {};
     ssize_t n         = ch.tryRead(buf, sizeof(buf) - 1);
@@ -391,12 +418,11 @@ TEST_F(ProducerTest, ExitsCleanlyOnEPIPE)
 {
     producer->start();
     std::this_thread::sleep_for(std::chrono::milliseconds{80});
-    ch.closeReader();   // delivers EPIPE on the producer's next write
+    ch.closeReader(); // delivers EPIPE on the producer's next write
 
     auto t0 = std::chrono::steady_clock::now();
     producer->stop();
-    auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-                  std::chrono::steady_clock::now() - t0).count();
+    auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - t0).count();
     EXPECT_LT(ms, 400) << "Producer did not exit after EPIPE within 400 ms";
 }
 
@@ -427,8 +453,7 @@ struct IntegrationTest : ::testing::Test
         // Consumer opens first so the producer's openWriter() is non-blocking.
         consumer = std::make_unique<Consumer>(ch);
         ASSERT_TRUE(consumer->open());
-        producer = std::make_unique<Producer>(
-            ch, Producer::sensorSource(), std::chrono::milliseconds{50});
+        producer = std::make_unique<Producer>(ch, Producer::sensorSource(), std::chrono::milliseconds{50});
     }
 
     void TearDown() override
@@ -476,7 +501,7 @@ TEST_F(IntegrationTest, MultipleSequentialDrainsAccumulateMessages)
         total += static_cast<int>(consumer->drain().size());
     }
     producer->stop();
-    total += static_cast<int>(consumer->drain().size());  // final drain
+    total += static_cast<int>(consumer->drain().size()); // final drain
 
     EXPECT_GT(total, 0) << "No messages accumulated across 5 drain() calls";
 }
@@ -489,10 +514,9 @@ TEST_F(IntegrationTest, CleanShutdownOrderDoesNotDeadlock)
     std::this_thread::sleep_for(std::chrono::milliseconds{100});
 
     auto t0 = std::chrono::steady_clock::now();
-    consumer->close();   // closes read end → EPIPE for producer
-    producer->stop();    // joins quickly because of EPIPE
-    auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-                  std::chrono::steady_clock::now() - t0).count();
+    consumer->close(); // closes read end → EPIPE for producer
+    producer->stop();  // joins quickly because of EPIPE
+    auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - t0).count();
 
     EXPECT_LT(ms, 500) << "Clean shutdown took too long: " << ms << " ms";
 }
@@ -503,7 +527,8 @@ TEST_F(IntegrationTest, CleanShutdownOrderDoesNotDeadlock)
 TEST_F(IntegrationTest, CustomMessageFunctionIsUsed)
 {
     std::atomic<int> callCount{0};
-    auto customFn = [&callCount]() -> std::string {
+    auto             customFn = [&callCount]() -> std::string
+    {
         int n = callCount.fetch_add(1, std::memory_order_relaxed);
         return "custom:" + std::to_string(n);
     };

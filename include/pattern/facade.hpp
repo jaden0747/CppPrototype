@@ -1,7 +1,7 @@
 #pragma once
+#include <stdexcept>
 #include <string>
 #include <vector>
-#include <stdexcept>
 
 // ---------------------------------------------------------------------------
 // Facade Pattern
@@ -25,21 +25,31 @@
 //  - Client code has too many dependencies on subsystem internals.
 // ---------------------------------------------------------------------------
 
-namespace pattern {
+namespace pattern
+{
 
 // ---------- Subsystem classes ---------------------------------------------
 
 class VideoFile
 {
 public:
-    explicit VideoFile(const std::string& path) : path_(path) {}
-    const std::string& path() const { return path_; }
+    explicit VideoFile(const std::string& path)
+        : path_(path)
+    {
+    }
+    const std::string& path() const
+    {
+        return path_;
+    }
     std::string codec() const
     {
-        if (path_.size() >= 3 && path_.substr(path_.size() - 3) == "mp4") return "h264";
-        if (path_.size() >= 3 && path_.substr(path_.size() - 3) == "mkv") return "vp9";
+        if (path_.size() >= 3 && path_.substr(path_.size() - 3) == "mp4")
+            return "h264";
+        if (path_.size() >= 3 && path_.substr(path_.size() - 3) == "mkv")
+            return "vp9";
         return "unknown";
     }
+
 private:
     std::string path_;
 };
@@ -81,22 +91,24 @@ public:
 class VideoConverter
 {
 public:
-    std::string convert(const std::string& filePath,
-                        const std::string& targetFormat)
+    std::string convert(const std::string& filePath, const std::string& targetFormat)
     {
         VideoFile file(filePath);
 
-        std::string sourceCodec  = CodecFactory::extract(file);
-        std::string targetCodec  = CodecFactory::extract(VideoFile("output." + targetFormat));
-        std::string data         = BitrateReader::read(file, sourceCodec);
-        std::string converted    = BitrateReader::convert(data, targetCodec);
-        std::string result       = AudioMixer::fix(converted);
+        std::string sourceCodec = CodecFactory::extract(file);
+        std::string targetCodec = CodecFactory::extract(VideoFile("output." + targetFormat));
+        std::string data        = BitrateReader::read(file, sourceCodec);
+        std::string converted   = BitrateReader::convert(data, targetCodec);
+        std::string result      = AudioMixer::fix(converted);
 
         lastResult_ = result;
         return result;
     }
 
-    const std::string& lastResult() const { return lastResult_; }
+    const std::string& lastResult() const
+    {
+        return lastResult_;
+    }
 
 private:
     std::string lastResult_;

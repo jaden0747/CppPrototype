@@ -12,6 +12,7 @@ struct AppSettings : DirtyTracker
     int height = 720;
 
     NLOHMANN_DEFINE_TYPE_INTRUSIVE(AppSettings, width, height);
+
 protected:
     void onChanged() override
     {

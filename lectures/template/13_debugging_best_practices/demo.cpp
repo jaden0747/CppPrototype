@@ -39,10 +39,9 @@ public:
 
 // Concept-based constraints → clear error messages
 template <typename T>
-concept Summable = requires(T a, T b)
-{
-    {a + b}->std::convertible_to<T>;
-    {T{}}; // default constructible for initial value
+concept Summable = requires(T a, T b) {
+    { a + b } -> std::convertible_to<T>;
+    { T{} }; // default constructible for initial value
 };
 
 template <Summable T>

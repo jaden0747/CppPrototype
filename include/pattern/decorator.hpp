@@ -28,15 +28,16 @@
 //  - Extension by subclassing is impractical (combinatorial explosion).
 // ---------------------------------------------------------------------------
 
-namespace pattern {
+namespace pattern
+{
 
 // ---------- Component interface ------------------------------------------
 
 class Coffee
 {
 public:
-    virtual ~Coffee() = default;
-    virtual double      cost()        const = 0;
+    virtual ~Coffee()                       = default;
+    virtual double      cost() const        = 0;
     virtual std::string description() const = 0;
 };
 
@@ -45,15 +46,27 @@ public:
 class Espresso : public Coffee
 {
 public:
-    double      cost()        const override { return 1.00; }
-    std::string description() const override { return "Espresso"; }
+    double cost() const override
+    {
+        return 1.00;
+    }
+    std::string description() const override
+    {
+        return "Espresso";
+    }
 };
 
 class SimpleCoffee : public Coffee
 {
 public:
-    double      cost()        const override { return 0.50; }
-    std::string description() const override { return "Simple coffee"; }
+    double cost() const override
+    {
+        return 0.50;
+    }
+    std::string description() const override
+    {
+        return "Simple coffee";
+    }
 };
 
 // ---------- Base Decorator -----------------------------------------------
@@ -62,10 +75,18 @@ class CoffeeDecorator : public Coffee
 {
 public:
     explicit CoffeeDecorator(std::unique_ptr<Coffee> wrappee)
-        : wrappee_(std::move(wrappee)) {}
+        : wrappee_(std::move(wrappee))
+    {
+    }
 
-    double      cost()        const override { return wrappee_->cost(); }
-    std::string description() const override { return wrappee_->description(); }
+    double cost() const override
+    {
+        return wrappee_->cost();
+    }
+    std::string description() const override
+    {
+        return wrappee_->description();
+    }
 
 protected:
     std::unique_ptr<Coffee> wrappee_;
@@ -77,30 +98,54 @@ class MilkDecorator : public CoffeeDecorator
 {
 public:
     explicit MilkDecorator(std::unique_ptr<Coffee> wrappee)
-        : CoffeeDecorator(std::move(wrappee)) {}
+        : CoffeeDecorator(std::move(wrappee))
+    {
+    }
 
-    double      cost()        const override { return wrappee_->cost() + 0.25; }
-    std::string description() const override { return wrappee_->description() + ", Milk"; }
+    double cost() const override
+    {
+        return wrappee_->cost() + 0.25;
+    }
+    std::string description() const override
+    {
+        return wrappee_->description() + ", Milk";
+    }
 };
 
 class CaramelDecorator : public CoffeeDecorator
 {
 public:
     explicit CaramelDecorator(std::unique_ptr<Coffee> wrappee)
-        : CoffeeDecorator(std::move(wrappee)) {}
+        : CoffeeDecorator(std::move(wrappee))
+    {
+    }
 
-    double      cost()        const override { return wrappee_->cost() + 0.50; }
-    std::string description() const override { return wrappee_->description() + ", Caramel"; }
+    double cost() const override
+    {
+        return wrappee_->cost() + 0.50;
+    }
+    std::string description() const override
+    {
+        return wrappee_->description() + ", Caramel";
+    }
 };
 
 class WhipDecorator : public CoffeeDecorator
 {
 public:
     explicit WhipDecorator(std::unique_ptr<Coffee> wrappee)
-        : CoffeeDecorator(std::move(wrappee)) {}
+        : CoffeeDecorator(std::move(wrappee))
+    {
+    }
 
-    double      cost()        const override { return wrappee_->cost() + 0.30; }
-    std::string description() const override { return wrappee_->description() + ", Whip"; }
+    double cost() const override
+    {
+        return wrappee_->cost() + 0.30;
+    }
+    std::string description() const override
+    {
+        return wrappee_->description() + ", Whip";
+    }
 };
 
 } // namespace pattern

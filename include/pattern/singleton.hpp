@@ -26,7 +26,8 @@
 //  - Hidden dependencies are hard to reason about.
 // ---------------------------------------------------------------------------
 
-namespace pattern {
+namespace pattern
+{
 
 // A Meyers Singleton that carries a simple integer counter as example state.
 // Replace `int counter_` with whatever shared resource you need.
@@ -41,9 +42,18 @@ public:
     }
 
     // --- example interface ------------------------------------------------
-    void increment() { ++counter_; }
-    void reset()     { counter_ = 0; }
-    int  value() const { return counter_; }
+    void increment()
+    {
+        ++counter_;
+    }
+    void reset()
+    {
+        counter_ = 0;
+    }
+    int value() const
+    {
+        return counter_;
+    }
     // ----------------------------------------------------------------------
 
     // Non-copyable, non-movable
@@ -53,7 +63,10 @@ public:
     Singleton& operator=(Singleton&&)      = delete;
 
 private:
-    Singleton() : counter_(0) {}
+    Singleton()
+        : counter_(0)
+    {
+    }
     int counter_;
 };
 

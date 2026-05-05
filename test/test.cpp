@@ -15,7 +15,7 @@
 // ---------------------------------------------------------------------------
 struct SensorReading
 {
-    uint32_t sensorId   = 0;
+    uint32_t sensorId    = 0;
     float    temperature = 0.0f;
     float    humidity    = 0.0f;
 
@@ -31,7 +31,7 @@ struct SensorReading
 TEST(Mempool, AcquireReturnsFreeSlot)
 {
     dc::Mempool<SensorReading> pool(4);
-    auto* buf = pool.acquire();
+    auto*                      buf = pool.acquire();
     ASSERT_NE(buf, nullptr);
     EXPECT_EQ(buf->refs.load(), 1);
 }
@@ -39,8 +39,8 @@ TEST(Mempool, AcquireReturnsFreeSlot)
 TEST(Mempool, PoolExhaustionReturnsNullptrOnlyWhenAllSlotsLive)
 {
     dc::Mempool<SensorReading> pool(2);
-    auto* b0 = pool.acquire();
-    auto* b1 = pool.acquire();
+    auto*                      b0 = pool.acquire();
+    auto*                      b1 = pool.acquire();
     ASSERT_NE(b0, nullptr);
     ASSERT_NE(b1, nullptr);
     // Both slots are live (refs > 0) — ring cannot evict safely.
@@ -69,7 +69,7 @@ TEST(Mempool, RingBufferEvictsOldestFreeSlot)
 TEST(Mempool, ReleaseReturnsSlotToPool)
 {
     dc::Mempool<SensorReading> pool(1);
-    auto* buf = pool.acquire();
+    auto*                      buf = pool.acquire();
     ASSERT_NE(buf, nullptr);
     EXPECT_EQ(pool.acquire(), nullptr); // only slot is live
     pool.release(*buf);
@@ -133,10 +133,10 @@ TEST(SenderPort, DisconnectMempoolDropsReservation)
     dc::Mempool<SensorReading>    pool(1);
     dc::SenderPort<SensorReading> sender;
     sender.connectMempool(pool);
-    ASSERT_NE(sender.reserve(), nullptr);   // acquires the only slot (refs=1)
-    EXPECT_EQ(pool.acquire(), nullptr);     // slot is live — cannot evict
-    sender.disconnectMempool();             // releases reservation (refs→0)
-    EXPECT_NE(pool.acquire(), nullptr);     // slot now evictable
+    ASSERT_NE(sender.reserve(), nullptr); // acquires the only slot (refs=1)
+    EXPECT_EQ(pool.acquire(), nullptr);   // slot is live — cannot evict
+    sender.disconnectMempool();           // releases reservation (refs→0)
+    EXPECT_NE(pool.acquire(), nullptr);   // slot now evictable
 }
 
 // ---------------------------------------------------------------------------
@@ -183,9 +183,9 @@ TEST(ReceiverPort, UpdateAfterDeliverProvidesData)
 
     const SensorReading* data = recv.getData();
     ASSERT_NE(data, nullptr);
-    EXPECT_EQ(data->sensorId,    42u);
+    EXPECT_EQ(data->sensorId, 42u);
     EXPECT_FLOAT_EQ(data->temperature, 23.5f);
-    EXPECT_FLOAT_EQ(data->humidity,    60.0f);
+    EXPECT_FLOAT_EQ(data->humidity, 60.0f);
 }
 
 TEST(ReceiverPort, CleanupClearsNewDataFlag)
@@ -401,7 +401,7 @@ public:
         Handler h;
         {
             std::lock_guard<std::mutex> lock(m_mu);
-            auto it = m_commands.find(name);
+            auto                        it = m_commands.find(name);
             if (it == m_commands.end())
                 return false;
             h = it->second; // copy out before releasing lock
@@ -429,25 +429,26 @@ TEST(Multithread, SenderOnWorkerReceiverOnMain)
     sender.connectMempool(pool);
     recv.connect(sender);
 
-    constexpr int        kSends = 200;
+    constexpr int     kSends = 200;
     std::atomic<int>  sentCount{0};
     std::atomic<bool> workerDone{false};
 
-    std::thread worker([&]()
-    {
-        for (int i = 0; i < kSends; ++i)
+    std::thread worker(
+        [&]()
         {
-            SensorReading* slot = sender.reserve();
-            if (slot)
+            for (int i = 0; i < kSends; ++i)
             {
-                slot->sensorId    = static_cast<uint32_t>(i);
-                slot->temperature = static_cast<float>(i);
-                sender.deliver();
-                sentCount.fetch_add(1, std::memory_order_relaxed);
+                SensorReading* slot = sender.reserve();
+                if (slot)
+                {
+                    slot->sensorId    = static_cast<uint32_t>(i);
+                    slot->temperature = static_cast<float>(i);
+                    sender.deliver();
+                    sentCount.fetch_add(1, std::memory_order_relaxed);
+                }
             }
-        }
-        workerDone.store(true, std::memory_order_release);
-    });
+            workerDone.store(true, std::memory_order_release);
+        });
 
     int received = 0;
     while (!workerDone.load(std::memory_order_acquire))
@@ -494,13 +495,14 @@ TEST(Multithread, MultipleReceiversUpdatingConcurrently)
     std::vector<std::thread> threads;
     for (auto& r : receivers)
     {
-        threads.emplace_back([&r, &sawNewData]()
-        {
-            r->update();
-            if (r->hasNewData())
-                sawNewData.fetch_add(1, std::memory_order_relaxed);
-            r->cleanup();
-        });
+        threads.emplace_back(
+            [&r, &sawNewData]()
+            {
+                r->update();
+                if (r->hasNewData())
+                    sawNewData.fetch_add(1, std::memory_order_relaxed);
+                r->cleanup();
+            });
     }
     for (auto& t : threads)
         t.join();
@@ -532,19 +534,20 @@ TEST(Multithread, ConcurrentReserveDeliverOnSharedSenderIsSafe)
     std::vector<std::thread> workers;
     for (int t = 0; t < kThreads; ++t)
     {
-        workers.emplace_back([&, t]()
-        {
-            for (int i = 0; i < kSendsPerThread; ++i)
+        workers.emplace_back(
+            [&, t]()
             {
-                SensorReading* slot = sender.reserve();
-                if (slot)
+                for (int i = 0; i < kSendsPerThread; ++i)
                 {
-                    slot->sensorId = static_cast<uint32_t>(t * 1000 + i);
-                    sender.deliver();
-                    deliveries.fetch_add(1, std::memory_order_relaxed);
+                    SensorReading* slot = sender.reserve();
+                    if (slot)
+                    {
+                        slot->sensorId = static_cast<uint32_t>(t * 1000 + i);
+                        sender.deliver();
+                        deliveries.fetch_add(1, std::memory_order_relaxed);
+                    }
                 }
-            }
-        });
+            });
     }
     for (auto& w : workers)
         w.join();
@@ -575,8 +578,24 @@ TEST(Multithread, ConcurrentUpdateCleanupOnSameReceiverIsSafe)
     *sender.reserve() = {1u, 0.f, 0.f};
     sender.deliver();
 
-    std::thread t1([&]() { for (int i = 0; i < 200; ++i) { recv.update(); recv.cleanup(); } });
-    std::thread t2([&]() { for (int i = 0; i < 200; ++i) { recv.update(); recv.cleanup(); } });
+    std::thread t1(
+        [&]()
+        {
+            for (int i = 0; i < 200; ++i)
+            {
+                recv.update();
+                recv.cleanup();
+            }
+        });
+    std::thread t2(
+        [&]()
+        {
+            for (int i = 0; i < 200; ++i)
+            {
+                recv.update();
+                recv.cleanup();
+            }
+        });
     t1.join();
     t2.join();
 
@@ -598,21 +617,24 @@ TEST(EventDriven, CommandFromWorkerThreadDeliveredToMainLoop)
     recv.connect(sender);
 
     CommandRegistry registry;
-    registry.registerCommand("sensor/update",
+    registry.registerCommand(
+        "sensor/update",
         [&]()
         {
             SensorReading* slot = sender.reserve();
-            if (!slot) return;
+            if (!slot)
+                return;
             *slot = {55u, 21.0f, 45.0f};
             sender.deliver();
         });
 
     std::atomic<bool> eventFired{false};
-    std::thread workerThread([&]()
-    {
-        registry.dispatch("sensor/update"); // simulates socket data arriving
-        eventFired.store(true, std::memory_order_release);
-    });
+    std::thread       workerThread(
+        [&]()
+        {
+            registry.dispatch("sensor/update"); // simulates socket data arriving
+            eventFired.store(true, std::memory_order_release);
+        });
 
     // Main loop: poll until event has been fired, then do one final update.
     while (!eventFired.load(std::memory_order_acquire))
@@ -645,19 +667,23 @@ TEST(EventDriven, MultipleCommandTypesRoutedToIndependentChannels)
     humRecv.connect(humSender);
 
     CommandRegistry registry;
-    registry.registerCommand("sensor/temperature",
+    registry.registerCommand(
+        "sensor/temperature",
         [&]()
         {
             SensorReading* slot = tempSender.reserve();
-            if (!slot) return;
+            if (!slot)
+                return;
             *slot = {1u, 36.6f, 0.0f};
             tempSender.deliver();
         });
-    registry.registerCommand("sensor/humidity",
+    registry.registerCommand(
+        "sensor/humidity",
         [&]()
         {
             SensorReading* slot = humSender.reserve();
-            if (!slot) return;
+            if (!slot)
+                return;
             *slot = {2u, 0.0f, 78.5f};
             humSender.deliver();
         });
@@ -694,11 +720,13 @@ TEST(EventDriven, HighThroughputCommandDispatch)
 
     std::atomic<uint32_t> seq{0};
     CommandRegistry       registry;
-    registry.registerCommand("ping",
+    registry.registerCommand(
+        "ping",
         [&]()
         {
             SensorReading* slot = sender.reserve();
-            if (!slot) return;
+            if (!slot)
+                return;
             slot->sensorId = seq.fetch_add(1, std::memory_order_relaxed);
             sender.deliver();
         });
@@ -706,11 +734,22 @@ TEST(EventDriven, HighThroughputCommandDispatch)
     std::atomic<bool>        allDone{false};
     std::vector<std::thread> workers;
     for (int t = 0; t < kWorkers; ++t)
-        workers.emplace_back([&]() { for (int i = 0; i < kDispatches; ++i) registry.dispatch("ping"); });
+        workers.emplace_back(
+            [&]()
+            {
+                for (int i = 0; i < kDispatches; ++i)
+                    registry.dispatch("ping");
+            });
 
     // Main-loop pattern: update top, work, cleanup bottom
-    int received = 0;
-    std::thread joiner([&]() { for (auto& w : workers) w.join(); allDone.store(true, std::memory_order_release); });
+    int         received = 0;
+    std::thread joiner(
+        [&]()
+        {
+            for (auto& w : workers)
+                w.join();
+            allDone.store(true, std::memory_order_release);
+        });
     while (!allDone.load(std::memory_order_acquire))
     {
         recv.update();
@@ -743,27 +782,30 @@ TEST(EventDriven, MainLoopUpdateCleanupPatternWithAsyncCommand)
     recv.connect(sender);
 
     CommandRegistry registry;
-    registry.registerCommand("event",
+    registry.registerCommand(
+        "event",
         [&]()
         {
             SensorReading* slot = sender.reserve();
-            if (!slot) return;
+            if (!slot)
+                return;
             *slot = {42u, 1.5f, 2.5f};
             sender.deliver();
         });
 
     std::atomic<bool> eventSent{false};
-    std::thread eventThread([&]()
-    {
-        std::this_thread::yield(); // let main loop spin at least once first
-        registry.dispatch("event");
-        eventSent.store(true, std::memory_order_release);
-    });
+    std::thread       eventThread(
+        [&]()
+        {
+            std::this_thread::yield(); // let main loop spin at least once first
+            registry.dispatch("event");
+            eventSent.store(true, std::memory_order_release);
+        });
 
     bool seen = false;
     for (int frame = 0; frame < 100'000 && !seen; ++frame)
     {
-        recv.update();                   // --- top of loop ---
+        recv.update(); // --- top of loop ---
         if (recv.hasNewData())
         {
             const SensorReading* d = recv.getData();
@@ -772,7 +814,7 @@ TEST(EventDriven, MainLoopUpdateCleanupPatternWithAsyncCommand)
             EXPECT_FLOAT_EQ(d->temperature, 1.5f);
             seen = true;
         }
-        recv.cleanup();                  // --- bottom of loop ---
+        recv.cleanup(); // --- bottom of loop ---
     }
     eventThread.join();
     EXPECT_TRUE(seen);

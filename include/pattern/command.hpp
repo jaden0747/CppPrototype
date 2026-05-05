@@ -1,8 +1,8 @@
 #pragma once
 #include <memory>
+#include <stack>
 #include <string>
 #include <vector>
-#include <stack>
 
 // ---------------------------------------------------------------------------
 // Command Pattern
@@ -27,20 +27,29 @@
 //  - Implement transactional behaviour (commit/rollback).
 // ---------------------------------------------------------------------------
 
-namespace pattern {
+namespace pattern
+{
 
 // ---------- Receiver -----------------------------------------------------
 
 class TextEditor
 {
 public:
-    void append(const std::string& text) { content_ += text; }
+    void append(const std::string& text)
+    {
+        content_ += text;
+    }
     void deleteLast(std::size_t n)
     {
-        if (n >= content_.size()) content_.clear();
-        else content_.erase(content_.size() - n, n);
+        if (n >= content_.size())
+            content_.clear();
+        else
+            content_.erase(content_.size() - n, n);
     }
-    const std::string& content() const { return content_; }
+    const std::string& content() const
+    {
+        return content_;
+    }
 
 private:
     std::string content_;
@@ -51,9 +60,9 @@ private:
 class Command
 {
 public:
-    virtual ~Command() = default;
-    virtual void execute() = 0;
-    virtual void undo()    = 0;
+    virtual ~Command()               = default;
+    virtual void        execute()    = 0;
+    virtual void        undo()       = 0;
     virtual std::string name() const = 0;
 };
 
@@ -63,11 +72,23 @@ class AppendCommand : public Command
 {
 public:
     AppendCommand(TextEditor& editor, const std::string& text)
-        : editor_(editor), text_(text) {}
+        : editor_(editor)
+        , text_(text)
+    {
+    }
 
-    void execute() override { editor_.append(text_); }
-    void undo()    override { editor_.deleteLast(text_.size()); }
-    std::string name() const override { return "Append(" + text_ + ")"; }
+    void execute() override
+    {
+        editor_.append(text_);
+    }
+    void undo() override
+    {
+        editor_.deleteLast(text_.size());
+    }
+    std::string name() const override
+    {
+        return "Append(" + text_ + ")";
+    }
 
 private:
     TextEditor& editor_;
@@ -78,18 +99,28 @@ class DeleteLastCommand : public Command
 {
 public:
     DeleteLastCommand(TextEditor& editor, std::size_t n)
-        : editor_(editor), n_(n), deleted_("") {}
+        : editor_(editor)
+        , n_(n)
+        , deleted_("")
+    {
+    }
 
     void execute() override
     {
-        const std::string& c = editor_.content();
-        std::size_t actual = (n_ <= c.size()) ? n_ : c.size();
-        deleted_ = c.substr(c.size() - actual, actual);
+        const std::string& c      = editor_.content();
+        std::size_t        actual = (n_ <= c.size()) ? n_ : c.size();
+        deleted_                  = c.substr(c.size() - actual, actual);
         editor_.deleteLast(n_);
     }
 
-    void undo() override { editor_.append(deleted_); }
-    std::string name() const override { return "DeleteLast(" + std::to_string(n_) + ")"; }
+    void undo() override
+    {
+        editor_.append(deleted_);
+    }
+    std::string name() const override
+    {
+        return "DeleteLast(" + std::to_string(n_) + ")";
+    }
 
 private:
     TextEditor& editor_;
@@ -107,12 +138,14 @@ public:
         cmd->execute();
         history_.push(std::move(cmd));
         // New action clears redo stack
-        while (!redo_.empty()) redo_.pop();
+        while (!redo_.empty())
+            redo_.pop();
     }
 
     bool undo()
     {
-        if (history_.empty()) return false;
+        if (history_.empty())
+            return false;
         history_.top()->undo();
         redo_.push(std::move(history_.top()));
         history_.pop();
@@ -121,17 +154,27 @@ public:
 
     bool redo()
     {
-        if (redo_.empty()) return false;
+        if (redo_.empty())
+            return false;
         redo_.top()->execute();
         history_.push(std::move(redo_.top()));
         redo_.pop();
         return true;
     }
 
-    bool canUndo() const { return !history_.empty(); }
-    bool canRedo() const { return !redo_.empty(); }
+    bool canUndo() const
+    {
+        return !history_.empty();
+    }
+    bool canRedo() const
+    {
+        return !redo_.empty();
+    }
 
-    std::size_t historySize() const { return history_.size(); }
+    std::size_t historySize() const
+    {
+        return history_.size();
+    }
 
 private:
     std::stack<std::unique_ptr<Command>> history_;

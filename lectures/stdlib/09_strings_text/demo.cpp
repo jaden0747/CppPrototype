@@ -13,7 +13,7 @@
 // std::format (C++20) — libstdc++ shipped it in GCC 13. Guard so this demo
 // still compiles on older toolchains (e.g. system GCC 11 on Ubuntu 22.04).
 #if __has_include(<format>)
-#  include <format>
+#include <format>
 #endif
 
 // ──────────────────────────────────────────────────────────────────────────

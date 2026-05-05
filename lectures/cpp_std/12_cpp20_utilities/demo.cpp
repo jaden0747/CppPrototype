@@ -4,8 +4,8 @@
 #include <algorithm>
 #include <compare>
 #include <iostream>
-#include <span>
 #include <source_location>
+#include <span>
 #include <stop_token>
 #include <string>
 #include <thread>
@@ -23,38 +23,49 @@
 // ──────────────────────────────────────────────────────────────────────────
 // 1. Three-way comparison (spaceship operator)
 // ──────────────────────────────────────────────────────────────────────────
-struct Point3D {
+struct Point3D
+{
     double x, y, z;
-    auto operator<=>(const Point3D&) const = default;
+    auto   operator<=>(const Point3D&) const = default;
 };
 
-struct Version {
+struct Version
+{
     int maj, min, patch;
     // Explicit spaceship: demonstrates <=> while giving IntelliSense a visible body
-    std::strong_ordering operator<=>(const Version& o) const {
-        if (auto c = maj <=> o.maj; c != 0) return c;
-        if (auto c = min <=> o.min; c != 0) return c;
+    std::strong_ordering operator<=>(const Version& o) const
+    {
+        if (auto c = maj <=> o.maj; c != 0)
+            return c;
+        if (auto c = min <=> o.min; c != 0)
+            return c;
         return patch <=> o.patch;
     }
-    bool operator==(const Version& o) const {
+    bool operator==(const Version& o) const
+    {
         return maj == o.maj && min == o.min && patch == o.patch;
     }
-    bool operator<(const Version& o) const {
+    bool operator<(const Version& o) const
+    {
         return std::tie(maj, min, patch) < std::tie(o.maj, o.min, o.patch);
     }
 };
 
-struct CaseInsensitive {
+struct CaseInsensitive
+{
     std::string data;
 
-    std::weak_ordering operator<=>(const CaseInsensitive& other) const {
-        auto lower = [](std::string s) {
+    std::weak_ordering operator<=>(const CaseInsensitive& other) const
+    {
+        auto lower = [](std::string s)
+        {
             std::ranges::transform(s, s.begin(), ::tolower);
             return s;
         };
         return lower(data) <=> lower(other.data);
     }
-    bool operator==(const CaseInsensitive& other) const {
+    bool operator==(const CaseInsensitive& other) const
+    {
         return (*this <=> other) == std::weak_ordering::equivalent;
     }
 };
@@ -65,13 +76,13 @@ void demo_spaceship()
 
     Point3D a{1, 2, 3}, b{1, 2, 4};
     std::cout << "  Point3D(1,2,3) < (1,2,4): " << std::boolalpha << (a < b) << "\n";
-    std::cout << "  Point3D(1,2,3) == (1,2,3): " << (a == Point3D{1,2,3}) << "\n";
+    std::cout << "  Point3D(1,2,3) == (1,2,3): " << (a == Point3D{1, 2, 3}) << "\n";
 
     Version v1{2, 1, 0}, v2{2, 0, 9};
     std::cout << "  Version 2.1.0 > 2.0.9: " << (v1 > v2) << "\n";
 
     // Sort versions — std::sort uses operator<, which is driven by our <=>
-    std::vector<Version> versions{{1,0,0}, {2,1,0}, {1,9,9}, {2,0,1}};
+    std::vector<Version> versions{{1, 0, 0}, {2, 1, 0}, {1, 9, 9}, {2, 0, 1}};
     std::sort(versions.begin(), versions.end());
     std::cout << "  Sorted versions: ";
     for (auto& v : versions)
@@ -113,8 +124,10 @@ void demo_format()
 void print_span(std::span<const int> data)
 {
     std::cout << "  [";
-    for (size_t i = 0; i < data.size(); ++i) {
-        if (i > 0) std::cout << ", ";
+    for (size_t i = 0; i < data.size(); ++i)
+    {
+        if (i > 0)
+            std::cout << ", ";
         std::cout << data[i];
     }
     std::cout << "] (size=" << data.size() << ")\n";
@@ -123,7 +136,8 @@ void print_span(std::span<const int> data)
 double average(std::span<const double> values)
 {
     double sum = 0;
-    for (double v : values) sum += v;
+    for (double v : values)
+        sum += v;
     return values.empty() ? 0 : sum / values.size();
 }
 
@@ -164,31 +178,36 @@ void demo_jthread()
 
     // Basic jthread (auto-joins)
     {
-        std::jthread t([]{ std::cout << "  Worker ran!\n"; });
+        std::jthread t([] { std::cout << "  Worker ran!\n"; });
         // ~jthread auto-joins here
     }
     std::cout << "  (jthread auto-joined)\n";
 
     // With stop token
     {
-        std::jthread t([](std::stop_token st) {
-            int count = 0;
-            while (!st.stop_requested() && count < 5) {
-                ++count;
-                std::this_thread::sleep_for(std::chrono::milliseconds(10));
-            }
-            std::cout << "  Worker did " << count << " iterations before stop\n";
-        });
+        std::jthread t(
+            [](std::stop_token st)
+            {
+                int count = 0;
+                while (!st.stop_requested() && count < 5)
+                {
+                    ++count;
+                    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+                }
+                std::cout << "  Worker did " << count << " iterations before stop\n";
+            });
         std::this_thread::sleep_for(std::chrono::milliseconds(30));
         t.request_stop();
     }
 
     // Stop callback
     {
-        std::jthread t([](std::stop_token st) {
-            std::stop_callback cb(st, []{ std::cout << "  Stop callback fired!\n"; });
-            std::this_thread::sleep_for(std::chrono::milliseconds(50));
-        });
+        std::jthread t(
+            [](std::stop_token st)
+            {
+                std::stop_callback cb(st, [] { std::cout << "  Stop callback fired!\n"; });
+                std::this_thread::sleep_for(std::chrono::milliseconds(50));
+            });
         t.request_stop();
     }
     std::cout << "\n";
@@ -197,11 +216,9 @@ void demo_jthread()
 // ──────────────────────────────────────────────────────────────────────────
 // 5. std::source_location
 // ──────────────────────────────────────────────────────────────────────────
-void log_message(std::string_view msg,
-                 std::source_location loc = std::source_location::current())
+void log_message(std::string_view msg, std::source_location loc = std::source_location::current())
 {
-    std::cout << "  [" << loc.file_name() << ":" << loc.line()
-              << " " << loc.function_name() << "] " << msg << "\n";
+    std::cout << "  [" << loc.file_name() << ":" << loc.line() << " " << loc.function_name() << "] " << msg << "\n";
 }
 
 void demo_source_location()

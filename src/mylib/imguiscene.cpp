@@ -23,7 +23,7 @@
 struct ImGuiSettings : DirtyTracker
 {
     std::string fontPath{"resources/font/ComicMonoNF-Regular.ttf"};
-    float      fontSize{36.0f};
+    float       fontSize{36.0f};
     NLOHMANN_DEFINE_TYPE_INTRUSIVE(ImGuiSettings, fontPath, fontSize)
 protected:
     void onChanged() override
@@ -37,9 +37,9 @@ void ImGuiScene::initScene()
 {
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
-    ImGuiIO& io = ImGui::GetIO();
+    ImGuiIO&    io       = ImGui::GetIO();
     std::string fontPath = g_ImGuiSettings->fontPath;
-    ImFont* font = io.Fonts->AddFontFromFileTTF(fontPath.c_str(), g_ImGuiSettings->fontSize);
+    ImFont*     font     = io.Fonts->AddFontFromFileTTF(fontPath.c_str(), g_ImGuiSettings->fontSize);
 
     if (font == nullptr)
     {

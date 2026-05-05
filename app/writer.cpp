@@ -2,15 +2,16 @@
 #include <cstring>
 #include <fcntl.h>
 #include <iostream>
+#include <pthread.h>
 #include <sys/mman.h>
+#include <sys/socket.h>
 #include <sys/stat.h>
 #include <thread>
 #include <unistd.h>
-#include <pthread.h>
-#include <sys/socket.h>
 
-struct SharedData {
-    int             initialized;   // set to 1 by writer after full init
+struct SharedData
+{
+    int             initialized; // set to 1 by writer after full init
     pthread_mutex_t mutex;
     pthread_cond_t  data_ready;    // signals new data available
     pthread_cond_t  data_consumed; // signals data was consumed
@@ -46,13 +47,14 @@ int main()
 
     // Memory map the shared memory object
     void* ptr = mmap(0, SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, shm_fd, 0);
-    if (ptr == MAP_FAILED) {
+    if (ptr == MAP_FAILED)
+    {
         std::perror("mmap");
         return 1;
     }
 
-    SharedData* data = static_cast<SharedData*>(ptr);
-    data->initialized = 0;  // mark not ready until fully initialized
+    SharedData* data  = static_cast<SharedData*>(ptr);
+    data->initialized = 0; // mark not ready until fully initialized
 
     // Initialize mutex and condition variables for process-shared use
     pthread_mutexattr_t attr;
@@ -69,11 +71,12 @@ int main()
     pthread_mutexattr_destroy(&attr);
 
     data->has_data    = false;
-    data->initialized = 1;  // signal to reader that init is complete
+    data->initialized = 1; // signal to reader that init is complete
 
     std::cout << "Writer: started, using condition variables..." << std::flush;
     int i = 0;
-    while (true) {
+    while (true)
+    {
         i++;
         pthread_mutex_lock(&data->mutex);
 
@@ -87,7 +90,8 @@ int main()
 
         // Wait for reader to consume the data
         std::cout << " (waiting for reader...)" << std::flush;
-        while (data->has_data) {
+        while (data->has_data)
+        {
             pthread_cond_wait(&data->data_consumed, &data->mutex);
         }
         std::cout << " (acknowledged)" << std::flush;

@@ -10,6 +10,9 @@ compile_commands.json
 # build folder
 *build*/*
 
+# local tool installs (e.g. pip install --target .tools/...)
+.tools/
+
 # Node artifact files
 node_modules/
 dist/

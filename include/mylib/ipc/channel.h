@@ -23,12 +23,12 @@ public:
     virtual void destroy() = 0;
 
     // Producer side
-    virtual bool    openWriter()                          = 0;
-    virtual ssize_t write(const void* buf, size_t n)     = 0;
-    virtual void    closeWriter()                         = 0;
+    virtual bool    openWriter()                     = 0;
+    virtual ssize_t write(const void* buf, size_t n) = 0;
+    virtual void    closeWriter()                    = 0;
 
     // Consumer side — tryRead must never block (O_NONBLOCK, EAGAIN is normal)
-    virtual bool    openReader()                          = 0;
-    virtual ssize_t tryRead(void* buf, size_t n)          = 0;
-    virtual void    closeReader()                         = 0;
+    virtual bool    openReader()                 = 0;
+    virtual ssize_t tryRead(void* buf, size_t n) = 0;
+    virtual void    closeReader()                = 0;
 };

@@ -1,5 +1,5 @@
-#include <gtest/gtest.h>
 #include "pattern/state.hpp"
+#include <gtest/gtest.h>
 
 using namespace pattern;
 

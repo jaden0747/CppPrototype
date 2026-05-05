@@ -1,7 +1,7 @@
 #pragma once
+#include <functional>
 #include <memory>
 #include <string>
-#include <functional>
 
 // ---------------------------------------------------------------------------
 // Chain of Responsibility Pattern
@@ -28,11 +28,12 @@
 //    dynamically.
 // ---------------------------------------------------------------------------
 
-namespace pattern {
+namespace pattern
+{
 
 struct SupportRequest
 {
-    int         level;      // 1 = basic, 2 = intermediate, 3 = advanced
+    int         level; // 1 = basic, 2 = intermediate, 3 = advanced
     std::string description;
 };
 

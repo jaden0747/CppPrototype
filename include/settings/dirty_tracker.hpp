@@ -23,7 +23,9 @@ public:
     }
 
 protected:
-    virtual void onChanged() {}
+    virtual void onChanged()
+    {
+    }
     ~DirtyTracker() = default;
 
 private:

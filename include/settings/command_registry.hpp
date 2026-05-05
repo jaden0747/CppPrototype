@@ -84,8 +84,7 @@ inline std::unique_ptr<cli::Menu> buildRootMenu()
 
     codingMenu->Insert(
         "set",
-        [](std::ostream& out, const std::string& itemName,
-           const std::string& memberName, const std::string& jsonValue)
+        [](std::ostream& out, const std::string& itemName, const std::string& memberName, const std::string& jsonValue)
         {
             auto& items = SettingsRegistry::instance().getItems();
             auto  it    = items.find(itemName);
@@ -137,12 +136,7 @@ inline std::unique_ptr<cli::Menu> buildRootMenu()
         "Show server status");
 
     rootMenu->Insert(
-        "echo",
-        [](std::ostream& out, const std::string& message)
-        {
-            out << message << "\n";
-        },
-        "Echo a message back");
+        "echo", [](std::ostream& out, const std::string& message) { out << message << "\n"; }, "Echo a message back");
 
     return rootMenu;
 }

@@ -1,9 +1,9 @@
 #pragma once
 #include <memory>
-#include <string>
-#include <vector>
-#include <unordered_map>
 #include <stdexcept>
+#include <string>
+#include <unordered_map>
+#include <vector>
 
 // ---------------------------------------------------------------------------
 // Prototype Pattern
@@ -27,21 +27,31 @@
 //  - Avoid subclassing the creator (prefer cloning over factory hierarchy).
 // ---------------------------------------------------------------------------
 
-namespace pattern {
+namespace pattern
+{
 
 // ---------- Shape hierarchy (example domain) ----------------------------
 
 class Shape
 {
 public:
-    explicit Shape(const std::string& color) : color_(color) {}
+    explicit Shape(const std::string& color)
+        : color_(color)
+    {
+    }
     virtual ~Shape() = default;
 
     virtual std::unique_ptr<Shape> clone() const = 0;
-    virtual std::string type()             const = 0;
+    virtual std::string            type() const  = 0;
 
-    const std::string& color() const { return color_; }
-    void setColor(const std::string& c)  { color_ = c; }
+    const std::string& color() const
+    {
+        return color_;
+    }
+    void setColor(const std::string& c)
+    {
+        color_ = c;
+    }
 
 protected:
     std::string color_;
@@ -51,16 +61,28 @@ class Circle : public Shape
 {
 public:
     Circle(const std::string& color, double radius)
-        : Shape(color), radius_(radius) {}
+        : Shape(color)
+        , radius_(radius)
+    {
+    }
 
     std::unique_ptr<Shape> clone() const override
     {
         return std::unique_ptr<Shape>(new Circle(*this));
     }
 
-    std::string type()   const override { return "Circle"; }
-    double      radius() const          { return radius_; }
-    void        setRadius(double r)     { radius_ = r; }
+    std::string type() const override
+    {
+        return "Circle";
+    }
+    double radius() const
+    {
+        return radius_;
+    }
+    void setRadius(double r)
+    {
+        radius_ = r;
+    }
 
 private:
     double radius_;
@@ -70,16 +92,29 @@ class Rectangle : public Shape
 {
 public:
     Rectangle(const std::string& color, double w, double h)
-        : Shape(color), width_(w), height_(h) {}
+        : Shape(color)
+        , width_(w)
+        , height_(h)
+    {
+    }
 
     std::unique_ptr<Shape> clone() const override
     {
         return std::unique_ptr<Shape>(new Rectangle(*this));
     }
 
-    std::string type()   const override { return "Rectangle"; }
-    double      width()  const          { return width_; }
-    double      height() const          { return height_; }
+    std::string type() const override
+    {
+        return "Rectangle";
+    }
+    double width() const
+    {
+        return width_;
+    }
+    double height() const
+    {
+        return height_;
+    }
 
 private:
     double width_, height_;

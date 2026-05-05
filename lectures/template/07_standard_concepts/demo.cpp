@@ -162,7 +162,8 @@ public:
     }
 
     // Conditionally enabled member
-    T sum() const requires std::integral<T> || std::floating_point<T>
+    T sum() const
+        requires std::integral<T> || std::floating_point<T>
     {
         return std::accumulate(data_.begin(), data_.end(), T{});
     }

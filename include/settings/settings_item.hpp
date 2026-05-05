@@ -26,17 +26,29 @@ public:
 
     ~SettingsItem() = default;
 
-    const T* operator->() const&  { return &m_data; }
-    T*       operator->()      &  { return &m_data; }
+    const T* operator->() const&
+    {
+        return &m_data;
+    }
+    T* operator->() &
+    {
+        return &m_data;
+    }
 
-    const T& data() const& { return m_data; }
-    T&       data()      & { return m_data; }
+    const T& data() const&
+    {
+        return m_data;
+    }
+    T& data() &
+    {
+        return m_data;
+    }
 
     const T* operator->() const&& = delete;
-    T*       operator->()      && = delete;
+    T*       operator->() &&      = delete;
 
     const T& data() const&& = delete;
-    T&       data()      && = delete;
+    T&       data() &&      = delete;
 
 private:
     SettingsItem(const SettingsItem&)            = delete;

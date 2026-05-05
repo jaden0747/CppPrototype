@@ -26,7 +26,7 @@ class SettingsRegistry
 public:
     struct Entry
     {
-        void*                                              ptr;
+        void*                                             ptr;
         std::function<void(void*, const nlohmann::json&)> loader;
         std::function<nlohmann::json(const void*)>        saver;
         std::function<void(void*)>                        onLoaded;

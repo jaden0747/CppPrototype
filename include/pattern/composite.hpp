@@ -1,10 +1,10 @@
 #pragma once
-#include <memory>
-#include <string>
-#include <vector>
 #include <algorithm>
+#include <memory>
 #include <numeric>
 #include <stdexcept>
+#include <string>
+#include <vector>
 
 // ---------------------------------------------------------------------------
 // Composite Pattern
@@ -29,21 +29,28 @@
 //    graphs, org charts, file systems).
 // ---------------------------------------------------------------------------
 
-namespace pattern {
+namespace pattern
+{
 
 // ---------- Component (abstract) -----------------------------------------
 
 class FileSystemNode
 {
 public:
-    explicit FileSystemNode(const std::string& name) : name_(name) {}
+    explicit FileSystemNode(const std::string& name)
+        : name_(name)
+    {
+    }
     virtual ~FileSystemNode() = default;
 
-    virtual long long size()                           const = 0;
+    virtual long long size() const                           = 0;
     virtual void      print(const std::string& indent) const = 0;
-    virtual bool      isDirectory()                    const = 0;
+    virtual bool      isDirectory() const                    = 0;
 
-    const std::string& name() const { return name_; }
+    const std::string& name() const
+    {
+        return name_;
+    }
 
 protected:
     std::string name_;
@@ -55,11 +62,20 @@ class File : public FileSystemNode
 {
 public:
     File(const std::string& name, long long bytes)
-        : FileSystemNode(name), bytes_(bytes) {}
+        : FileSystemNode(name)
+        , bytes_(bytes)
+    {
+    }
 
-    long long size()                           const override { return bytes_; }
-    bool      isDirectory()                    const override { return false; }
-    void      print(const std::string& indent) const override
+    long long size() const override
+    {
+        return bytes_;
+    }
+    bool isDirectory() const override
+    {
+        return false;
+    }
+    void print(const std::string& indent) const override
     {
         // Simple output for demonstration — not using std::cout in tests
         (void)indent;
@@ -74,7 +90,10 @@ private:
 class Directory : public FileSystemNode
 {
 public:
-    explicit Directory(const std::string& name) : FileSystemNode(name) {}
+    explicit Directory(const std::string& name)
+        : FileSystemNode(name)
+    {
+    }
 
     void add(std::unique_ptr<FileSystemNode> child)
     {
@@ -89,7 +108,10 @@ public:
         return total;
     }
 
-    bool isDirectory() const override { return true; }
+    bool isDirectory() const override
+    {
+        return true;
+    }
 
     void print(const std::string& indent) const override
     {
@@ -98,7 +120,10 @@ public:
             child->print(indent + "  ");
     }
 
-    std::size_t childCount() const { return children_.size(); }
+    std::size_t childCount() const
+    {
+        return children_.size();
+    }
 
     const FileSystemNode* childAt(std::size_t index) const
     {

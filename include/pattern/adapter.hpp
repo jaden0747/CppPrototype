@@ -1,7 +1,7 @@
 #pragma once
-#include <string>
-#include <sstream>
 #include <cmath>
+#include <sstream>
+#include <string>
 
 // ---------------------------------------------------------------------------
 // Adapter Pattern
@@ -30,17 +30,27 @@
 //  - You need a reusable class that cooperates with unrelated classes.
 // ---------------------------------------------------------------------------
 
-namespace pattern {
+namespace pattern
+{
 
 // ---------- Target interface (what the client expects) -------------------
 
 class RoundHole
 {
 public:
-    explicit RoundHole(double radius) : radius_(radius) {}
+    explicit RoundHole(double radius)
+        : radius_(radius)
+    {
+    }
 
-    bool fits(double peg_radius) const { return peg_radius <= radius_; }
-    double radius() const { return radius_; }
+    bool fits(double peg_radius) const
+    {
+        return peg_radius <= radius_;
+    }
+    double radius() const
+    {
+        return radius_;
+    }
 
 private:
     double radius_;
@@ -49,9 +59,15 @@ private:
 class RoundPeg
 {
 public:
-    explicit RoundPeg(double radius) : radius_(radius) {}
+    explicit RoundPeg(double radius)
+        : radius_(radius)
+    {
+    }
     virtual ~RoundPeg() = default;
-    virtual double radius() const { return radius_; }
+    virtual double radius() const
+    {
+        return radius_;
+    }
 
 private:
     double radius_;
@@ -62,8 +78,14 @@ private:
 class SquarePeg
 {
 public:
-    explicit SquarePeg(double width) : width_(width) {}
-    double width() const { return width_; }
+    explicit SquarePeg(double width)
+        : width_(width)
+    {
+    }
+    double width() const
+    {
+        return width_;
+    }
 
     std::string describe() const
     {
@@ -85,8 +107,11 @@ class SquarePegAdapter : public RoundPeg
 {
 public:
     explicit SquarePegAdapter(const SquarePeg& peg)
-        : RoundPeg(0.0),   // base radius unused
-          adaptee_(peg) {}
+        : RoundPeg(0.0)
+        , // base radius unused
+        adaptee_(peg)
+    {
+    }
 
     double radius() const override
     {
@@ -104,7 +129,10 @@ class SquarePegClassAdapter : public RoundPeg, public SquarePeg
 {
 public:
     explicit SquarePegClassAdapter(double width)
-        : RoundPeg(0.0), SquarePeg(width) {}
+        : RoundPeg(0.0)
+        , SquarePeg(width)
+    {
+    }
 
     double radius() const override
     {

@@ -1,9 +1,9 @@
 #pragma once
-#include <string>
-#include <vector>
 #include <algorithm>
 #include <functional>
 #include <stdexcept>
+#include <string>
+#include <vector>
 
 // ---------------------------------------------------------------------------
 // Observer Pattern
@@ -29,7 +29,8 @@
 //    assumptions about who those objects are.
 // ---------------------------------------------------------------------------
 
-namespace pattern {
+namespace pattern
+{
 
 // ---------- Observer interface -------------------------------------------
 
@@ -42,7 +43,7 @@ struct Event
 class IObserver
 {
 public:
-    virtual ~IObserver() = default;
+    virtual ~IObserver()                 = default;
     virtual void onEvent(const Event& e) = 0;
 };
 
@@ -51,9 +52,9 @@ public:
 class ISubject
 {
 public:
-    virtual ~ISubject() = default;
-    virtual void attach(IObserver* o) = 0;
-    virtual void detach(IObserver* o) = 0;
+    virtual ~ISubject()                 = default;
+    virtual void attach(IObserver* o)   = 0;
+    virtual void detach(IObserver* o)   = 0;
     virtual void notify(const Event& e) = 0;
 };
 
@@ -69,9 +70,7 @@ public:
 
     void detach(IObserver* o) override
     {
-        observers_.erase(
-            std::remove(observers_.begin(), observers_.end(), o),
-            observers_.end());
+        observers_.erase(std::remove(observers_.begin(), observers_.end(), o), observers_.end());
     }
 
     void notify(const Event& e) override
@@ -87,15 +86,24 @@ public:
         notify(Event{ticker, std::to_string(price)});
     }
 
-    const std::string& lastTicker() const { return lastTicker_; }
-    double             lastPrice()  const { return lastPrice_; }
+    const std::string& lastTicker() const
+    {
+        return lastTicker_;
+    }
+    double lastPrice() const
+    {
+        return lastPrice_;
+    }
 
-    std::size_t subscriberCount() const { return observers_.size(); }
+    std::size_t subscriberCount() const
+    {
+        return observers_.size();
+    }
 
 private:
     std::vector<IObserver*> observers_;
-    std::string lastTicker_;
-    double      lastPrice_{0.0};
+    std::string             lastTicker_;
+    double                  lastPrice_{0.0};
 };
 
 // ---------- Concrete Observers -------------------------------------------
@@ -107,7 +115,11 @@ public:
     {
         log_.push_back("[" + e.type + "] " + e.data);
     }
-    const std::vector<std::string>& log() const { return log_; }
+    const std::vector<std::string>& log() const
+    {
+        return log_;
+    }
+
 private:
     std::vector<std::string> log_;
 };
@@ -115,7 +127,10 @@ private:
 class AlertMonitor : public IObserver
 {
 public:
-    explicit AlertMonitor(double threshold) : threshold_(threshold) {}
+    explicit AlertMonitor(double threshold)
+        : threshold_(threshold)
+    {
+    }
 
     void onEvent(const Event& e) override
     {
@@ -123,16 +138,19 @@ public:
         if (price > threshold_)
             alerts_.push_back(e.type + " exceeded threshold: " + e.data);
     }
-    const std::vector<std::string>& alerts() const { return alerts_; }
+    const std::vector<std::string>& alerts() const
+    {
+        return alerts_;
+    }
 
 private:
-    double threshold_;
+    double                   threshold_;
     std::vector<std::string> alerts_;
 };
 
 // ---------- Generic EventEmitter (callback-based) -----------------------
 
-template<typename T>
+template <typename T>
 class EventEmitter
 {
 public:
@@ -148,8 +166,7 @@ public:
     void unsubscribe(int id)
     {
         handlers_.erase(
-            std::remove_if(handlers_.begin(), handlers_.end(),
-                [id](const Entry& e){ return e.id == id; }),
+            std::remove_if(handlers_.begin(), handlers_.end(), [id](const Entry& e) { return e.id == id; }),
             handlers_.end());
     }
 
@@ -159,12 +176,19 @@ public:
             entry.handler(value);
     }
 
-    std::size_t subscriberCount() const { return handlers_.size(); }
+    std::size_t subscriberCount() const
+    {
+        return handlers_.size();
+    }
 
 private:
-    struct Entry { int id; Handler handler; };
+    struct Entry
+    {
+        int     id;
+        Handler handler;
+    };
     std::vector<Entry> handlers_;
-    int nextId_{0};
+    int                nextId_{0};
 };
 
 } // namespace pattern

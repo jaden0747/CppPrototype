@@ -11,11 +11,12 @@
 #define WIN_WIDTH 800
 #define WIN_HEIGHT 600
 
-class SceneRunner {
+class SceneRunner
+{
 private:
     GLFWwindow* window;
-    int fbw, fbh;
-    bool debug;
+    int         fbw, fbh;
+    bool        debug;
 
 public:
     SceneRunner(const std::string& windowTitle, int width = WIN_WIDTH, int height = WIN_HEIGHT, int samples = 0);
@@ -27,5 +28,5 @@ public:
 
 private:
     static void printHelpInfo(const char* exeFile, std::map<std::string, std::string>& sceneData);
-    void mainLoop(GLFWwindow* window, std::unique_ptr<Scene> scene);
+    void        mainLoop(GLFWwindow* window, std::unique_ptr<Scene> scene);
 };

@@ -9,18 +9,18 @@
 //   5. getItems    — iterate the registry
 //   6. saveJson    — serialize all items back to file
 // ---------------------------------------------------------------------------
-#include "settings/settings_item.hpp"
 #include "settings/examples/app_config.hpp"
-#include "settings/examples/render_settings.hpp"
 #include "settings/examples/network_config.hpp"
+#include "settings/examples/render_settings.hpp"
+#include "settings/settings_item.hpp"
 
 #include <cassert>
 #include <iostream>
 
 // File-scope registrations — each SettingsItem<T> registers itself at
 // static-init time under the given string key.
-SettingsItem<AppConfig>     g_app("AppConfig");
-SettingsItem<RenderSettings> g_render("RenderSettings");   // inherits DirtyTracker
+SettingsItem<AppConfig>      g_app("AppConfig");
+SettingsItem<RenderSettings> g_render("RenderSettings"); // inherits DirtyTracker
 SettingsItem<NetworkConfig>  g_network("NetworkConfig");
 
 int main()
@@ -31,17 +31,17 @@ int main()
     // Step 1: Default values
     // ------------------------------------------------------------------
     std::cout << "=== Step 1: Default values ===\n";
-    assert(g_app->appName      == "MyApp");
-    assert(g_app->windowWidth  == 1280);
+    assert(g_app->appName == "MyApp");
+    assert(g_app->windowWidth == 1280);
     assert(g_app->windowHeight == 720);
-    assert(g_app->fullscreen   == false);
-    assert(g_app->targetFps    == 60.0f);
+    assert(g_app->fullscreen == false);
+    assert(g_app->targetFps == 60.0f);
     std::cout << "  appName:      " << g_app->appName << "\n";
     std::cout << "  windowWidth:  " << g_app->windowWidth << "\n";
     std::cout << "  fullscreen:   " << g_app->fullscreen << "\n";
 
     assert(g_render->shadowQuality == "medium");
-    assert(g_render->maxLights     == 8);
+    assert(g_render->maxLights == 8);
     assert(g_render->getModifiedCount() == 0U);
     std::cout << "  shadowQuality: " << g_render->shadowQuality << "\n";
     std::cout << "  maxLights:     " << g_render->maxLights << "\n";
@@ -49,8 +49,7 @@ int main()
 
     assert(g_network->endpoint.host == "localhost");
     assert(g_network->endpoint.port == 8080);
-    std::cout << "  endpoint:     " << g_network->endpoint.host
-              << ":" << g_network->endpoint.port << "\n";
+    std::cout << "  endpoint:     " << g_network->endpoint.host << ":" << g_network->endpoint.port << "\n";
 
     // ------------------------------------------------------------------
     // Step 2: loadJson — reads settings.json, fires dirty() on RenderSettings
@@ -62,20 +61,19 @@ int main()
     std::cout << "  appName:       " << g_app->appName << "\n";
     std::cout << "  shadowQuality: " << g_render->shadowQuality << "\n";
     std::cout << "  modifiedCount: " << g_render->getModifiedCount() << "\n";
-    std::cout << "  endpoint:      " << g_network->endpoint.host
-              << ":" << g_network->endpoint.port << "\n";
+    std::cout << "  endpoint:      " << g_network->endpoint.host << ":" << g_network->endpoint.port << "\n";
 
     // ------------------------------------------------------------------
     // Step 3: getItemValue — typed read of a single member
     // ------------------------------------------------------------------
     std::cout << "\n=== Step 3: getItemValue ===\n";
-    int width = 0;
+    int  width    = 0;
     bool gotWidth = reg.getItemValue<int>("AppConfig", "windowWidth", width);
     assert(gotWidth);
     std::cout << "  AppConfig.windowWidth = " << width << "\n";
 
     std::string shadow;
-    bool gotShadow = reg.getItemValue<std::string>("RenderSettings", "shadowQuality", shadow);
+    bool        gotShadow = reg.getItemValue<std::string>("RenderSettings", "shadowQuality", shadow);
     assert(gotShadow);
     std::cout << "  RenderSettings.shadowQuality = " << shadow << "\n";
 

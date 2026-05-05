@@ -24,16 +24,16 @@
 //   status                                — show registered item names
 //   echo <message>                        — echo a string
 // ---------------------------------------------------------------------------
-#include "settings/settings_item.hpp"
 #include "settings/command_registry.hpp"
 #include "settings/examples/app_config.hpp"
-#include "settings/examples/render_settings.hpp"
 #include "settings/examples/network_config.hpp"
+#include "settings/examples/render_settings.hpp"
+#include "settings/settings_item.hpp"
 
 #include <cli/cli.h>
-#include <cli/standaloneasioscheduler.h>
 #include <cli/clilocalsession.h>
 #include <cli/standaloneasioremotecli.h>
+#include <cli/standaloneasioscheduler.h>
 
 #include <iostream>
 #include <string>
@@ -70,11 +70,12 @@ int main(int argc, char* argv[])
     cli::StandaloneAsioScheduler scheduler;
 
     cli::CliLocalTerminalSession localSession(cli, scheduler, std::cout);
-    localSession.ExitAction([&scheduler](std::ostream& out)
-    {
-        out << "Shutting down...\n";
-        scheduler.Stop();
-    });
+    localSession.ExitAction(
+        [&scheduler](std::ostream& out)
+        {
+            out << "Shutting down...\n";
+            scheduler.Stop();
+        });
 
     cli::StandaloneAsioCliTelnetServer server(cli, scheduler, port);
 

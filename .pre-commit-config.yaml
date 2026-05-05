@@ -1,0 +1,37 @@
+# =============================================================================
+# pre-commit configuration
+# =============================================================================
+# One-time setup (per clone):
+#   pip install pre-commit
+#   pre-commit install              # wires .git/hooks/pre-commit
+#
+# Useful commands:
+#   pre-commit run                  # run hooks on staged files (same as commit)
+#   pre-commit run --all-files      # run hooks on the entire repo
+#   pre-commit autoupdate           # bump hook revisions
+#
+# Notes:
+#   * clang-format is pinned to a specific version so every contributor
+#     formats identically — do NOT remove the pin without coordinating.
+#   * The version below MUST match (or be compatible with) the
+#     `Standard:` field in .clang-format. v22.x understands C++20/23.
+# =============================================================================
+
+repos:
+  - repo: https://github.com/pre-commit/mirrors-clang-format
+    rev: v22.1.4
+    hooks:
+      - id: clang-format
+        name: clang-format (C/C++)
+        # `types_or` matches by content sniff + extension via the `identify`
+        # library; this catches *.cpp/*.hpp/*.h/*.cc/*.cxx/*.hxx etc.
+        types_or: [c, c++]
+        # Skip vendored, generated, and tooling trees.
+        exclude: |
+          (?x)^(
+            external/        |   # third-party submodules (e.g. imgui)
+            build/           |   # CMake/Ninja build output
+            conan/           |   # Conan profiles & generated files
+            \.tools/         |   # local tool installs (e.g. pip --target)
+            .*/generated/
+          )
