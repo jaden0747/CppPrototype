@@ -178,8 +178,15 @@ void demo_split_join()
     std::cout << "  split(\"" << csv << "\", ','): ";
     for (auto field : csv | std::views::split(','))
     {
-        std::string_view sv(field.begin(), field.end());
-        std::cout << "[" << sv << "] ";
+        // NOTE: in C++20 the inner range from views::split is only a forward
+        // range whose end() returns std::default_sentinel_t — neither the
+        // string_view iterator-pair constructor (requires contiguous_iterator)
+        // nor std::string's (begin, end) constructor accept it. Materialize
+        // the field via std::ranges::copy. C++23's std::string_view range
+        // constructor / std::ranges::to would let us avoid the copy.
+        std::string s;
+        std::ranges::copy(field, std::back_inserter(s));
+        std::cout << "[" << s << "] ";
     }
     std::cout << "\n\n";
 }

@@ -2,13 +2,18 @@
 // Stdlib 09 — Exercises: Strings & Text
 // ============================================================================
 #include <charconv>
-#include <format>
 #include <iostream>
 #include <regex>
 #include <sstream>
 #include <string>
 #include <string_view>
 #include <vector>
+
+// std::format (C++20) — libstdc++ shipped it in GCC 13. Guard so the file
+// still compiles on older toolchains (e.g. system GCC 11 on Ubuntu 22.04).
+#if __has_include(<format>)
+#  include <format>
+#endif
 
 // ── Exercise 1: String view splitter ─────────────────────────────────────
 void ex1_sv_split()
