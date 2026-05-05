@@ -1,0 +1,5 @@
+# Linux / Release — optimized build.
+include(linux)
+
+[settings]
+build_type=Release

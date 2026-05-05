@@ -1,0 +1,25 @@
+# macOS base profile: AppleClang 15 + Ninja + libc++.
+#
+# Defaults to Apple Silicon (armv8); Intel Mac users override with `-s arch=x86_64`.
+#
+# Platform/toolchain only — does NOT set `build_type`. Use one of:
+#
+#   conan/profiles/macos-debug
+#   conan/profiles/macos-release
+#
+# Both inherit from this file via Conan's `include()` directive.
+
+[settings]
+os=Macos
+arch=armv8
+compiler=apple-clang
+compiler.version=15
+compiler.cppstd=17
+compiler.libcxx=libc++
+
+[buildenv]
+CC=clang
+CXX=clang++
+
+[conf]
+tools.cmake.cmaketoolchain:generator=Ninja

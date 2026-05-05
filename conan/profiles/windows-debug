@@ -1,0 +1,6 @@
+# Windows / Debug — debug-iterators MSVC CRT (MDd) + unoptimized build.
+include(windows)
+
+[settings]
+build_type=Debug
+compiler.runtime_type=Debug

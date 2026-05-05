@@ -7,6 +7,7 @@
 #include <map>
 #include <set>
 #include <string>
+#include <vector>
 
 // ── Exercise 1: Word frequency counter ───────────────────────────────────
 void ex1_word_freq()

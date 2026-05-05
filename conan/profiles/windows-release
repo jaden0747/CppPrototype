@@ -1,0 +1,6 @@
+# Windows / Release — optimized build, release MSVC CRT (MD).
+include(windows)
+
+[settings]
+build_type=Release
+compiler.runtime_type=Release

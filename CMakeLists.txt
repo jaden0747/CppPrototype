@@ -50,10 +50,12 @@ target_link_libraries(Application PRIVATE ${PROJECT_NAME})
 
 find_package(GTest REQUIRED)
 # enable_testing()
-add_executable(Test
-    test/test.cpp
-    test/test_ipc.cpp
-)
+set(TEST_SOURCES test/test.cpp)
+# test_ipc.cpp exercises mkfifo / SIGPIPE / O_NONBLOCK semantics — POSIX-only.
+if(NOT WIN32)
+    list(APPEND TEST_SOURCES test/test_ipc.cpp)
+endif()
+add_executable(Test ${TEST_SOURCES})
 target_include_directories(Test PUBLIC ${PROJECT_INCLUDE_DIRS} ${GTest_INCLUDE_DIR})
 target_link_libraries(Test PUBLIC ${GTest_LIBRARIES} ${PROJECT_NAME} ${CONAN_LIBS})
 

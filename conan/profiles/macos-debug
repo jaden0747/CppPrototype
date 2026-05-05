@@ -1,0 +1,5 @@
+# macOS / Debug — unoptimized build with debug symbols.
+include(macos)
+
+[settings]
+build_type=Debug

@@ -1,0 +1,5 @@
+# macOS / Release — optimized build.
+include(macos)
+
+[settings]
+build_type=Release

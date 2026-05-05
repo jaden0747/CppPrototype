@@ -1,6 +1,7 @@
 // ============================================================================
 // Template 08 — Demo: CRTP & Static Polymorphism
 // ============================================================================
+#define _USE_MATH_DEFINES   // expose M_PI from <cmath> on MSVC / clang-cl
 #include <cassert>
 #include <cmath>
 #include <iostream>

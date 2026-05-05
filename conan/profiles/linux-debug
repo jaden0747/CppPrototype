@@ -1,0 +1,5 @@
+# Linux / Debug — unoptimized build with debug symbols.
+include(linux)
+
+[settings]
+build_type=Debug
