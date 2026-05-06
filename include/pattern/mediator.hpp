@@ -1,8 +1,10 @@
 #pragma once
-#include <algorithm>
-#include <memory>
 #include <string>
 #include <vector>
+#include <any>
+#include <functional>
+#include <unordered_map>
+
 
 // ---------------------------------------------------------------------------
 // Mediator Pattern
@@ -148,6 +150,107 @@ public:
 
 private:
     std::vector<ChatUser*> users_;
+};
+
+// Event payload — flexible key/value bag
+struct GameEvent
+{
+    std::string                               type;
+    std::unordered_map<std::string, std::any> data;
+};
+
+using EventHandler = std::function<void(const GameEvent&)>;
+
+class GameEventBus
+{
+public:
+    static GameEventBus& Get()
+    {
+        static GameEventBus instance;
+        return instance;
+    }
+
+    void Subscribe(const std::string& eventType, EventHandler handler)
+    {
+        listeners_[eventType].push_back(std::move(handler));
+    }
+
+    void Publish(const GameEvent& event)
+    {
+        auto it = listeners_.find(event.type);
+        if (it != listeners_.end())
+        {
+            for (auto& handler : it->second)
+                handler(event);
+        }
+    }
+
+private:
+    std::unordered_map<std::string, std::vector<EventHandler>> listeners_;
+};
+
+// ----- Physics: publishes a collision event -----
+class PhysicsSystem
+{
+public:
+    void OnCollision(const std::string& objA, const std::string& objB)
+    {
+        GameEventBus::Get().Publish({"collision", {{"objectA", objA}, {"objectB", objB}}});
+    }
+};
+
+// ----- GameState: listens and updates score -----
+class GameState
+{
+public:
+    GameState()
+    {
+        GameEventBus::Get().Subscribe(
+            "collision",
+            [this](const GameEvent& e)
+            {
+                auto objA = std::any_cast<std::string>(e.data.at("objectA"));
+                if (objA == "bullet")
+                {
+                    score_ += 10;
+                    GameEventBus::Get().Publish({"score_changed", {{"score", score_}}});
+                }
+            });
+    }
+
+private:
+    int score_ = 0;
+};
+
+// ----- UI: listens for score changes -----
+class UISystem
+{
+public:
+    UISystem()
+    {
+        GameEventBus::Get().Subscribe(
+            "score_changed",
+            [](const GameEvent& e)
+            {
+                int score = std::any_cast<int>(e.data.at("score"));
+                // Re-draw the HUD score display
+            });
+    }
+};
+
+// ----- Audio: listens for collision to play SFX -----
+class AudioSystem
+{
+public:
+    AudioSystem()
+    {
+        GameEventBus::Get().Subscribe(
+            "collision",
+            [](const GameEvent& e)
+            {
+                // Play impact sound
+            });
+    }
 };
 
 } // namespace pattern

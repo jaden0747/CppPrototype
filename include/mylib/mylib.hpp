@@ -1,7 +1,6 @@
 #pragma once
 
 #include <iostream>
-#include <string>
 
 #include "settings/dirty_tracker.hpp"
 #include "settings/settings_item.hpp"

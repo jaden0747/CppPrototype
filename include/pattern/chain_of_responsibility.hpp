@@ -110,4 +110,199 @@ inline std::unique_ptr<SupportHandler> buildDefaultChain()
     return t1;
 }
 
+struct InputEvent
+{
+    enum class Type
+    {
+        KeyPress,
+        MouseClick,
+        GamepadButton
+    };
+    Type type;
+    int  keyCode;
+    bool handled = false;
+};
+
+class Player
+{
+public:
+    bool isGrounded() const
+    {
+        return true;
+    }
+
+    void jump()
+    {
+    }
+};
+
+class InputHandler
+{
+public:
+    virtual ~InputHandler() = default;
+
+    // Set the next handler in the chain
+    InputHandler* setNext(std::unique_ptr<InputHandler> next)
+    {
+        m_next = std::move(next);
+        return m_next.get();
+    }
+
+    // Each handler decides to handle or pass along
+    virtual void handle(InputEvent& event)
+    {
+        if (m_next && !event.handled)
+            m_next->handle(event);
+    }
+
+protected:
+    std::unique_ptr<InputHandler> m_next;
+};
+
+// UIHandler — highest priority, eats input when menus are open
+class UIHandler : public InputHandler
+{
+public:
+    void handle(InputEvent& event) override
+    {
+        if (m_menuOpen && event.type == InputEvent::Type::KeyPress)
+        {
+            // Consume the event — don't pass down the chain
+            event.handled = true;
+            processMenuInput(event.keyCode);
+            return;
+        }
+        InputHandler::handle(event); // pass along
+    }
+
+    void setMenuOpen(bool open)
+    {
+        m_menuOpen = open;
+    }
+
+private:
+    bool m_menuOpen = false;
+
+    void processMenuInput(int key)
+    {
+        // Navigate menu items, confirm selection, etc.
+    }
+};
+
+// AbilityHandler — checks if a key is bound to a skill
+class AbilityHandler : public InputHandler
+{
+public:
+    void handle(InputEvent& event) override
+    {
+        if (event.type == InputEvent::Type::KeyPress)
+        {
+            auto it = m_abilityBindings.find(event.keyCode);
+            if (it != m_abilityBindings.end())
+            {
+                activateAbility(it->second);
+                event.handled = true;
+                return;
+            }
+        }
+        InputHandler::handle(event);
+    }
+
+    void bindAbility(int keyCode, int abilityId)
+    {
+        m_abilityBindings[keyCode] = abilityId;
+    }
+
+private:
+    std::unordered_map<int, int> m_abilityBindings;
+
+    void activateAbility(int id)
+    { /* trigger ability system */
+    }
+};
+
+// MovementHandler — jump, crouch, dodge
+class MovementHandler : public InputHandler
+{
+public:
+    void handle(InputEvent& event) override
+    {
+#define KEY_SPACE 32
+        if (event.type == InputEvent::Type::KeyPress && event.keyCode == KEY_SPACE)
+        {
+            if (m_player->isGrounded())
+            {
+                m_player->jump();
+                event.handled = true;
+                return;
+            }
+        }
+        InputHandler::handle(event);
+    }
+
+    void setPlayer(Player* player)
+    {
+        m_player = player;
+    }
+
+private:
+    Player* m_player = nullptr;
+};
+
+// DefaultHandler — catches anything unhandled for logging/debug
+class DefaultHandler : public InputHandler
+{
+public:
+    void handle(InputEvent& event) override
+    {
+        if (!event.handled)
+            logUnhandledInput(event);
+        // End of chain — don't call InputHandler::handle()
+    }
+
+private:
+    void logUnhandledInput(const InputEvent& e)
+    {
+        // Debug output
+    }
+};
+
+// GameInputSystem.cpp
+class GameInputSystem
+{
+public:
+    void buildChain(Player* player)
+    {
+        // Build from the bottom up — ownership flows through unique_ptr
+        auto defaultH  = std::make_unique<DefaultHandler>();
+        auto movementH = std::make_unique<MovementHandler>();
+        auto abilityH  = std::make_unique<AbilityHandler>();
+        auto uiH       = std::make_unique<UIHandler>();
+
+        constexpr int KEY_Q            = 81;
+        constexpr int KEY_E            = 69;
+        constexpr int ABILITY_FIREBALL = 1;
+        constexpr int ABILITY_SHIELD   = 2;
+        movementH->setPlayer(player);
+        abilityH->bindAbility(KEY_Q, ABILITY_FIREBALL);
+        abilityH->bindAbility(KEY_E, ABILITY_SHIELD);
+
+        // Wire the chain: UI → Ability → Movement → Default
+        movementH->setNext(std::move(defaultH));
+        abilityH->setNext(std::move(movementH));
+        uiH->setNext(std::move(abilityH));
+
+        m_chainHead = std::move(uiH);
+    }
+
+    void onInput(InputEvent event)
+    {
+        if (m_chainHead)
+            m_chainHead->handle(event);
+    }
+
+private:
+    std::unique_ptr<InputHandler> m_chainHead;
+};
+
 } // namespace pattern
