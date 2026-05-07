@@ -6,6 +6,9 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <cmath>
+
+#define M_PI 3.1415936
 
 // ──────────────────────────────────────────────────────────────────────────
 // 1. Basic CRTP Pattern
