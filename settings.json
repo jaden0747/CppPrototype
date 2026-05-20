@@ -1,12 +1,22 @@
 {
-    // AppConfig — overrides flat scalar defaults from AppConfig constructor
     "AppConfig": {
-        "appName": "RegistryDemo",
-        "windowWidth": 600,
-        "windowHeight": 600
+        "appName": "MyApp",
+        "fullscreen": false,
+        "targetFps": 60.0,
+        "windowHeight": 1080,
+        "windowWidth": 1920,
+        "uiFontSize": 32.0,
+        "uiFontPath": "resources/font/ComicMonoNF-Regular.ttf"
     },
-    "SceneConfig": {
-        "clearColor": [0.1, 0.5, 0.1, 1.0]
+    "RenderSettings": {
+        "clearColor": [
+            0.46078431606292725,
+            0.30718952417373657,
+            0.30718952417373657,
+            1.0
+        ],
+        "maxLights": 8,
+        "shadowQuality": "medium",
+        "wireframe": true
     }
 }
-

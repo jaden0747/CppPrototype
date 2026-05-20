@@ -17,7 +17,9 @@ struct AppConfig
     int         windowHeight = 720;
     bool        fullscreen   = false;
     float       targetFps    = 60.0f;
+    float       uiFontSize   = 16.0f;
+    std::string uiFontPath   = "resources/font/ComicMonoNF-Regular.ttf";
 
     NLOHMANN_DEFINE_TYPE_INTRUSIVE(AppConfig,
-        appName, windowWidth, windowHeight, fullscreen, targetFps)
+        appName, windowWidth, windowHeight, fullscreen, targetFps, uiFontSize, uiFontPath)
 };

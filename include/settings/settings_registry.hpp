@@ -16,7 +16,6 @@
 /// SettingsRegistry
 ///
 /// Singleton global registry mapping string keys → typed settings objects.
-/// Replaces pc::util::coding::CodingManager.
 ///
 /// Items register themselves at static-init time via SettingsItem<T> globals,
 /// matching the original Item<T> / CodingManager::addItem() pattern.

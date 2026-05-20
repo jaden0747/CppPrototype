@@ -9,7 +9,6 @@
 ///
 /// Wraps a settings struct T, registers it in SettingsRegistry under the
 /// given string key at construction time.
-/// Replaces pc::util::coding::Item<T>.
 ///
 /// Use as a file-scope or namespace-scope variable:
 ///   SettingsItem<MySettings> g_mySettings("MyFeature");

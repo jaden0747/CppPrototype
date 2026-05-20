@@ -11,10 +11,6 @@
 /// command_registry.hpp
 ///
 /// Builds the CLI root menu using daniele77/cli.
-/// Replaces:
-///   - pc::util::cli::CommandCallback / CommandCallbackGroup / CommandRegistry
-///   - pc::util::cli::CodingCommand  (list / get / set / export)
-///   - pc::util::cli::SocketCommandLineInterface
 ///
 /// Usage:
 ///   auto rootMenu = buildRootMenu();
