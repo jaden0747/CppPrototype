@@ -21,7 +21,7 @@ struct RenderSettings : DirtyTracker
     std::string          shadowQuality = "medium";  // "low" | "medium" | "high"
     int                  maxLights     = 8;
 
-    NLOHMANN_DEFINE_TYPE_INTRUSIVE(RenderSettings,
+    NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(RenderSettings,
         clearColor, wireframe, shadowQuality, maxLights)
 
 protected:

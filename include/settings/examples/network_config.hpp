@@ -13,7 +13,7 @@ struct EndpointInfo
     std::string host = "localhost";
     int         port = 8080;
 
-    NLOHMANN_DEFINE_TYPE_INTRUSIVE(EndpointInfo, host, port)
+    NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(EndpointInfo, host, port)
 };
 
 // ---------------------------------------------------------------------------
@@ -28,5 +28,5 @@ struct NetworkConfig
     int          timeoutMs = 5000;
     bool         enableTLS = false;
 
-    NLOHMANN_DEFINE_TYPE_INTRUSIVE(NetworkConfig, endpoint, timeoutMs, enableTLS)
+    NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(NetworkConfig, endpoint, timeoutMs, enableTLS)
 };

@@ -8,6 +8,8 @@
 #include "settings/examples/app_config.hpp"
 #include "settings/examples/render_settings.hpp"
 #include "mylib/data_container.hpp"
+#include "mylib/log.hpp"
+#include "mylib/imgui_log_sink.hpp"
 
 #include <imgui.h>
 #include <imgui_impl_glfw.h>
@@ -39,9 +41,12 @@ static dc::Mempool<CounterData>    g_counterPool(4);
 static dc::SenderPort<CounterData> g_counterSender;
 static std::atomic<bool>           g_running{true};
 
+static auto g_portsLog = Log::get("ports");
+
 void backgroundThread()
 {
     g_counterSender.connectMempool(g_counterPool);
+    g_portsLog->info("Background sender started");
     int count = 0;
     while (g_running.load())
     {
@@ -54,9 +59,12 @@ void backgroundThread()
                     std::chrono::steady_clock::now().time_since_epoch())
                     .count());
             g_counterSender.deliver();
+            if (count % 50 == 0)
+                g_portsLog->debug("Sent counter={}", count);
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
+    g_portsLog->info("Background sender stopped");
 }
 
 // ---------------------------------------------------------------------------
@@ -67,7 +75,20 @@ int main()
     // Load settings
     SettingsRegistry::instance().loadJson("settings.json");
 
-    // GLFW init
+    // Initialize logging
+    Log::init(g_app->logLevel, "app.log");
+    auto imguiSink = std::make_shared<ImGuiLogSink_mt>();
+    const std::string pattern = "%^[%H:%M:%S.%e] [%n] [%l] %v%$";
+    imguiSink->set_pattern(pattern);
+    Log::addSink(imguiSink);
+    auto appLog = Log::get("app");
+    appLog->info("Application starting (logLevel={})", g_app->logLevel);
+
+    appLog->info("log: info");
+    appLog->warn("log: warn");
+    appLog->error("log: error");
+    appLog->critical("log: critical");
+
     if (!glfwInit())
         return 1;
 
@@ -190,6 +211,9 @@ int main()
         }
         ImGui::End();
 
+        // --- Log panel ---
+        imguiSink->draw("Log");
+
         // Render
         ImGui::Render();
         int displayW, displayH;
@@ -208,6 +232,7 @@ int main()
     }
 
     // Shutdown
+    appLog->info("Application shutting down");
     g_running.store(false);
     bgThread.join();
 

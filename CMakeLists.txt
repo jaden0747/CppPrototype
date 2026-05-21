@@ -14,6 +14,7 @@ find_package(cli CONFIG REQUIRED)
 find_package(asio CONFIG REQUIRED)
 find_package(GTest REQUIRED)
 find_package(Threads REQUIRED)
+find_package(spdlog REQUIRED)
 
 # ---------------------------------------------------------------------------
 # Dear ImGui (from submodule in external/imgui)
@@ -50,6 +51,7 @@ target_link_libraries(app PRIVATE
     glfw
     OpenGL::GL
     nlohmann_json::nlohmann_json
+    spdlog::spdlog_header_only
     Threads::Threads
 )
 if(APPLE)
@@ -77,9 +79,11 @@ target_link_libraries(cli_server PRIVATE
 # Tests
 # ---------------------------------------------------------------------------
 enable_testing()
+
 add_executable(tests
     test/test_data_container.cpp
     test/test_settings.cpp
+    test/test_log.cpp
 )
 target_include_directories(tests PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
@@ -88,6 +92,7 @@ target_link_libraries(tests PRIVATE
     GTest::gtest
     GTest::gtest_main
     nlohmann_json::nlohmann_json
+    spdlog::spdlog_header_only
     Threads::Threads
 )
 add_test(NAME unit_tests COMMAND tests)

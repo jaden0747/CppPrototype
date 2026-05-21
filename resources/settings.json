@@ -7,7 +7,8 @@
         "fullscreen": false,
         "targetFps": 60.0,
         "uiFontSize": 16.0,
-        "uiFontPath": "resources/font/ComicMonoNF-Regular.ttf"
+        "uiFontPath": "resources/font/ComicMonoNF-Regular.ttf",
+        "logLevel": "debug"
     },
     // RenderSettings — inherits DirtyTracker; dirty() fires on every load
     "RenderSettings": {

@@ -33,7 +33,7 @@
 <body>
 
 <h1>Prototype — Application Architecture</h1>
-<p class="subtitle">Minimal C++ framework: Settings + Data Ports + ImGui Debug Window</p>
+<p class="subtitle">Minimal C++ framework: Settings + Data Ports + Logging + ImGui Debug Window</p>
 
 <div class="diagram">
 
@@ -70,6 +70,10 @@
         <div class="name">Data Ports</div>
         <div class="desc">Mempool&lt;T&gt; (ring buffer)<br>SenderPort&lt;T&gt; (fan-out)<br>ReceiverPort&lt;T&gt; (poll)</div>
       </div>
+      <div class="box">
+        <div class="name">Logging</div>
+        <div class="desc">Log (spdlog wrapper)<br>Per-module named loggers<br>ImGuiLogSink (in-app panel)<br>ANSI auto-detect</div>
+      </div>
     </div>
   </div>
 
@@ -99,6 +103,10 @@
         <div class="name">GTest</div>
         <div class="desc">Unit testing</div>
       </div>
+      <div class="box">
+        <div class="name">spdlog</div>
+        <div class="desc">Logging backend<br>ANSI colors + file sink</div>
+      </div>
     </div>
   </div>
 
@@ -114,6 +122,9 @@
     <li><code>Main Loop (bottom)</code> → <code>ReceiverPort::cleanup()</code> — clears newData flag</li>
     <li><code>SettingsRegistry::loadJson()</code> → deserializes JSON into registered <code>SettingsItem&lt;T&gt;</code> objects → triggers <code>DirtyTracker::dirty()</code></li>
     <li><code>SettingsRegistry::saveJson()</code> → serializes all items back to JSON file on exit</li>
+    <li><code>Log::init(level, file)</code> → creates console sink (ANSI auto-detect) + file sink + sets level from <code>AppConfig::logLevel</code></li>
+    <li><code>Log::get("name")</code> → returns a named logger that outputs to all sinks (console, file, ImGui panel)</li>
+    <li><code>ImGuiLogSink::draw()</code> → renders scrollable, color-coded, filterable log panel each frame</li>
   </ul>
 </div>
 
@@ -130,6 +141,8 @@
     <tr><td><code>include/settings/command_registry.hpp</code></td><td>CLI menu builder (list/get/set/export commands)</td></tr>
     <tr><td><code>include/settings/examples/</code></td><td>AppConfig, RenderSettings, NetworkConfig structs</td></tr>
     <tr><td><code>include/mylib/data_container.hpp</code></td><td>Mempool, SenderPort, ReceiverPort (zero-copy threading)</td></tr>
+    <tr><td><code>include/mylib/log.hpp</code></td><td>Logging module: init, per-module loggers, runtime level control</td></tr>
+    <tr><td><code>include/mylib/imgui_log_sink.hpp</code></td><td>spdlog sink rendering colored log entries in an ImGui panel</td></tr>
     <tr><td><code>test/test_data_container.cpp</code></td><td>Unit tests for data ports</td></tr>
     <tr><td><code>test/test_settings.cpp</code></td><td>Unit tests for settings system</td></tr>
     <tr><td><code>resources/settings.json</code></td><td>Default runtime configuration</td></tr>

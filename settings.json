@@ -2,11 +2,12 @@
     "AppConfig": {
         "appName": "MyApp",
         "fullscreen": false,
+        "logLevel": "debug",
         "targetFps": 60.0,
-        "windowHeight": 1080,
-        "windowWidth": 1920,
+        "uiFontPath": "resources/font/ComicMonoNF-Regular.ttf",
         "uiFontSize": 32.0,
-        "uiFontPath": "resources/font/ComicMonoNF-Regular.ttf"
+        "windowHeight": 1080,
+        "windowWidth": 1920
     },
     "RenderSettings": {
         "clearColor": [
