@@ -76,6 +76,40 @@ target_link_libraries(cli_server PRIVATE
 )
 
 # ---------------------------------------------------------------------------
+# Stream server — Phase 1: glReadPixels capture + TCP sender
+# ---------------------------------------------------------------------------
+add_executable(stream_server app/stream_server.cpp)
+target_include_directories(stream_server PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+target_link_libraries(stream_server PRIVATE
+    imgui
+    glfw
+    OpenGL::GL
+    Threads::Threads
+)
+if(APPLE)
+    target_compile_definitions(stream_server PRIVATE GL_SILENCE_DEPRECATION)
+endif()
+
+# ---------------------------------------------------------------------------
+# Stream client — Phase 1: TCP receiver + ImGui::Image display
+# ---------------------------------------------------------------------------
+add_executable(stream_client app/stream_client.cpp)
+target_include_directories(stream_client PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+target_link_libraries(stream_client PRIVATE
+    imgui
+    glfw
+    OpenGL::GL
+    Threads::Threads
+)
+if(APPLE)
+    target_compile_definitions(stream_client PRIVATE GL_SILENCE_DEPRECATION)
+endif()
+
+# ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
 enable_testing()

@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stream Pipeline — Decision Log</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #1a1a2e; color: #e0e0e0; padding: 2rem; }
+  h1 { text-align: center; margin-bottom: 0.5rem; color: #00d4ff; font-size: 1.8rem; }
+  .subtitle { text-align: center; color: #888; margin-bottom: 2rem; font-size: 0.9rem; }
+
+  /* Phase tracker */
+  .phases { display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap; margin-bottom: 2.5rem; }
+  .phase { padding: 0.5rem 1.2rem; border-radius: 20px; font-size: 0.82rem; font-weight: 600; border: 1px solid transparent; }
+  .phase.done      { background: #0d4f2a; border-color: #1a9e54; color: #4ade80; }
+  .phase.active    { background: #1a3a5c; border-color: #00d4ff; color: #00d4ff; animation: pulse 1.5s ease-in-out infinite; }
+  .phase.pending   { background: #2a2a3e; border-color: #444; color: #666; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.6} }
+
+  /* Architecture overview */
+  .pipeline { max-width: 860px; margin: 0 auto 2.5rem; background: #16213e; border: 1px solid #333; border-radius: 10px; padding: 1.5rem; }
+  .pipeline h2 { color: #00d4ff; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 1rem; }
+  .pipeline pre { background: #0f1e35; border-radius: 6px; padding: 1rem; font-size: 0.8rem; color: #a0cfff; line-height: 1.6; overflow-x: auto; }
+
+  /* Decisions */
+  .section { max-width: 860px; margin: 0 auto 2rem; }
+  .section h2 { color: #00d4ff; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 1rem; }
+
+  .decision { background: #16213e; border: 1px solid #333; border-radius: 8px; margin-bottom: 1rem; overflow: hidden; }
+  .decision-header { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem; background: #0f1e35; }
+  .decision-id { font-size: 0.7rem; color: #555; font-weight: 600; min-width: 40px; }
+  .decision-title { font-weight: 600; color: #fff; flex: 1; }
+  .decision-tag { font-size: 0.7rem; padding: 2px 8px; border-radius: 10px; font-weight: 600; }
+  .tag-arch    { background: #2d1b69; color: #a78bfa; border: 1px solid #4c1d95; }
+  .tag-network { background: #1a3a5c; color: #60a5fa; border: 1px solid #1e40af; }
+  .tag-render  { background: #2a1a0a; color: #fb923c; border: 1px solid #7c2d12; }
+  .tag-build   { background: #0d2a1a; color: #4ade80; border: 1px solid #065f46; }
+
+  .decision-body { padding: 1rem; }
+  .decision-row { margin-bottom: 0.6rem; font-size: 0.85rem; line-height: 1.5; }
+  .decision-row strong { color: #aaa; min-width: 90px; display: inline-block; }
+  .options { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.3rem; }
+  .option { padding: 3px 10px; border-radius: 12px; font-size: 0.75rem; border: 1px solid #333; }
+  .option.chosen { border-color: #00d4ff; color: #00d4ff; background: #0d2035; }
+  .option.rejected { color: #666; text-decoration: line-through; }
+
+  /* Protocol spec */
+  .proto { background: #16213e; border: 1px solid #333; border-radius: 8px; padding: 1.25rem; margin-bottom: 1rem; }
+  .proto h3 { color: #fff; font-size: 0.9rem; margin-bottom: 0.75rem; }
+  .proto table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+  .proto th { color: #888; text-align: left; padding: 0.35rem 0.5rem; border-bottom: 1px solid #333; }
+  .proto td { padding: 0.35rem 0.5rem; border-bottom: 1px solid #222; }
+  .proto td:first-child { color: #00d4ff; font-family: monospace; }
+  .proto td:last-child { color: #aaa; }
+
+  /* Status log */
+  .log { background: #16213e; border: 1px solid #333; border-radius: 8px; padding: 1.25rem; }
+  .log-entry { display: flex; gap: 1rem; align-items: baseline; padding: 0.4rem 0; border-bottom: 1px solid #222; font-size: 0.83rem; }
+  .log-entry:last-child { border-bottom: none; }
+  .log-time  { color: #555; min-width: 80px; font-family: monospace; }
+  .log-phase { min-width: 120px; }
+  .log-text  { color: #ccc; flex: 1; }
+  .status-done    { color: #4ade80; }
+  .status-active  { color: #00d4ff; }
+  .status-pending { color: #666; }
+
+  /* File map */
+  .filemap { background: #16213e; border: 1px solid #333; border-radius: 8px; overflow: hidden; }
+  .filemap table { width: 100%; border-collapse: collapse; font-size: 0.83rem; }
+  .filemap th { color: #888; text-align: left; padding: 0.5rem 1rem; border-bottom: 1px solid #333; background: #0f1e35; }
+  .filemap td { padding: 0.45rem 1rem; border-bottom: 1px solid #222; }
+  .filemap td:first-child { font-family: monospace; color: #00d4ff; }
+  .filemap td:nth-child(2) { color: #aaa; }
+  .filemap td:nth-child(3) { color: #4ade80; font-size: 0.75rem; }
+  .filemap tr.new { background: #0d2035; }
+</style>
+</head>
+<body>
+
+<h1>Stream Pipeline — Decision Log</h1>
+<p class="subtitle">Phase 1: Raw Frame Streaming &nbsp;|&nbsp; Learning prototype modelled on Sunshine/Moonlight</p>
+
+<!-- Phase tracker -->
+<div class="phases">
+  <div class="phase done">✓ Requirements</div>
+  <div class="phase done">✓ Architecture</div>
+  <div class="phase done">✓ Implementation</div>
+  <div class="phase done">✓ Build</div>
+</div>
+
+<!-- Pipeline diagram -->
+<div class="pipeline">
+  <h2>Pipeline Overview</h2>
+  <pre>
+  [stream_server  —  TCP :9999]              [stream_client]
+  ┌─────────────────────────┐               ┌──────────────────────────┐
+  │  GLFW/ImGui render loop │               │  GLFW/ImGui render loop  │
+  │   ↓ glReadPixels        │               │   ↑ glTexSubImage2D      │
+  │  SharedFrame (mutex)    │               │  SharedFrame (mutex)     │
+  │   ↓ notify_one          │               │   ↑ hasNew flag          │
+  │  Network Thread         │─── TCP ──────▶│  Network Thread          │
+  │   send [w][h][len][RGB] │               │   recv [w][h][len][RGB]  │
+  └─────────────────────────┘               └──────────────────────────┘
+  </pre>
+</div>
+
+<!-- Decisions -->
+<div class="section">
+  <h2>Architecture Decisions</h2>
+
+  <!-- D-001 -->
+  <div class="decision">
+    <div class="decision-header">
+      <span class="decision-id">D-001</span>
+      <span class="decision-title">Phase scope — which feature set to implement</span>
+      <span class="decision-tag tag-arch">Architecture</span>
+    </div>
+    <div class="decision-body">
+      <div class="decision-row"><strong>Question:</strong> Implement Phase 1 (raw BGR over TCP) or Phase 2 (H.264 encoded)?</div>
+      <div class="decision-row">
+        <strong>Options:</strong>
+        <div class="options">
+          <span class="option chosen">Phase 1 — raw RGB over TCP</span>
+          <span class="option rejected">Phase 2 — H.264 + libx264</span>
+        </div>
+      </div>
+      <div class="decision-row"><strong>Rationale:</strong> Phase 1 isolates the producer-consumer loop without codec complexity. Raw frames are uncompressed and easy to inspect. H.264 (Phase 2) will be trivially addable on top once the transport layer is solid. The purpose here is understanding the pipeline, not achieving broadcast-quality compression.</div>
+    </div>
+  </div>
+
+  <!-- D-002 -->
+  <div class="decision">
+    <div class="decision-header">
+      <span class="decision-id">D-002</span>
+      <span class="decision-title">Video source — what the server captures</span>
+      <span class="decision-tag tag-render">Rendering</span>
+    </div>
+    <div class="decision-body">
+      <div class="decision-row"><strong>Question:</strong> What pixel data should the server stream?</div>
+      <div class="decision-row">
+        <strong>Options:</strong>
+        <div class="options">
+          <span class="option chosen">glReadPixels — own OpenGL framebuffer</span>
+          <span class="option rejected">ScreenCaptureKit (macOS 12.3+)</span>
+          <span class="option rejected">OpenCV webcam</span>
+          <span class="option rejected">Synthetic test pattern</span>
+        </div>
+      </div>
+      <div class="decision-row"><strong>Rationale:</strong> <code>glReadPixels</code> requires zero new dependencies — the project already has OpenGL via GLFW. It captures the server's own rendered ImGui window, which gives an interesting recursive "mirror" effect (the client sees the server's UI). This mirrors how Sunshine captures the GPU framebuffer before sending. No Objective-C bridging (ScreenCaptureKit) or new Conan packages (OpenCV) needed.</div>
+      <div class="decision-row"><strong>Trade-off:</strong> <code>glReadPixels</code> is synchronous (stalls GPU pipeline). For Phase 1 this is fine; Phase 3+ would switch to async PBO (Pixel Buffer Object) readback.</div>
+    </div>
+  </div>
+
+  <!-- D-003 -->
+  <div class="decision">
+    <div class="decision-header">
+      <span class="decision-id">D-003</span>
+      <span class="decision-title">Resolution — fixed vs dynamic</span>
+      <span class="decision-tag tag-network">Network</span>
+    </div>
+    <div class="decision-body">
+      <div class="decision-row"><strong>Question:</strong> Stream at a fixed resolution or whatever the GLFW window is?</div>
+      <div class="decision-row">
+        <strong>Options:</strong>
+        <div class="options">
+          <span class="option rejected">640×480 fixed</span>
+          <span class="option rejected">1280×720 fixed</span>
+          <span class="option chosen">Dynamic — match framebuffer size, embed w/h in header</span>
+        </div>
+      </div>
+      <div class="decision-row"><strong>Rationale:</strong> Dynamic resolution is more realistic (mirrors real streaming protocols). The three extra bytes in the per-frame header (8 bytes for w+h) are negligible vs frame payload (~2.7 MB at 1280×720). It also handles Retina displays correctly because we use <code>glfwGetFramebufferSize</code> (not window size), which gives physical pixels.</div>
+    </div>
+  </div>
+
+  <!-- D-004 -->
+  <div class="decision">
+    <div class="decision-header">
+      <span class="decision-id">D-004</span>
+      <span class="decision-title">Network transport — TCP socket implementation</span>
+      <span class="decision-tag tag-network">Network</span>
+    </div>
+    <div class="decision-body">
+      <div class="decision-row"><strong>Question:</strong> POSIX sockets vs ASIO (already in Conan) for the TCP layer?</div>
+      <div class="decision-row">
+        <strong>Options:</strong>
+        <div class="options">
+          <span class="option chosen">POSIX sockets (sys/socket.h) + _WIN32 stubs</span>
+          <span class="option rejected">ASIO synchronous</span>
+        </div>
+      </div>
+      <div class="decision-row"><strong>Rationale:</strong> Phase 1 in the requirements doc uses raw POSIX sockets — keeping the learning artifact consistent with the material. ASIO adds another layer of abstraction that obscures the actual syscalls. The stream_server/client don't need the event-loop facilities ASIO provides. Windows compatibility is handled with a thin <code>#ifdef _WIN32</code> block (WSAStartup + SOCKET type).</div>
+    </div>
+  </div>
+
+  <!-- D-005 -->
+  <div class="decision">
+    <div class="decision-header">
+      <span class="decision-id">D-005</span>
+      <span class="decision-title">Threading model — render vs network</span>
+      <span class="decision-tag tag-arch">Architecture</span>
+    </div>
+    <div class="decision-body">
+      <div class="decision-row"><strong>Question:</strong> How do we decouple the render loop (60 FPS) from the network send (limited by bandwidth)?</div>
+      <div class="decision-row"><strong>Chosen:</strong> Single <code>SharedFrame</code> struct with mutex + condition_variable. Render thread writes latest frame and sets <code>hasNew=true</code>, then <code>notify_one</code>. Network thread waits with <code>wait_for(200ms)</code> so it can check <code>g_running</code> on timeout. If the render produces a new frame before the network thread finishes sending the last one, the old frame is simply overwritten (latest-wins). This matches real streaming behaviour: you never want to show a stale frame.</div>
+      <div class="decision-row"><strong>Trade-off:</strong> Copying up to ~2.7 MB while holding the mutex briefly stalls the render thread. For Phase 1 (local loopback) this is &lt;1ms and invisible. Phase 2+ should use a triple/ring buffer.</div>
+    </div>
+  </div>
+
+  <!-- D-006 -->
+  <div class="decision">
+    <div class="decision-header">
+      <span class="decision-id">D-006</span>
+      <span class="decision-title">Frame wire protocol</span>
+      <span class="decision-tag tag-network">Network</span>
+    </div>
+    <div class="decision-body">
+      <div class="decision-row"><strong>Protocol (TCP stream, no framing delimiter needed):</strong></div>
+      <table style="width:100%;border-collapse:collapse;font-size:0.82rem;margin-top:0.5rem;">
+        <tr><th style="color:#888;text-align:left;padding:4px 8px;border-bottom:1px solid #333">Offset</th><th style="color:#888;text-align:left;padding:4px 8px;border-bottom:1px solid #333">Size</th><th style="color:#888;text-align:left;padding:4px 8px;border-bottom:1px solid #333">Field</th><th style="color:#888;text-align:left;padding:4px 8px;border-bottom:1px solid #333">Notes</th></tr>
+        <tr><td style="color:#00d4ff;padding:4px 8px;border-bottom:1px solid #222;font-family:monospace">0</td><td style="padding:4px 8px;border-bottom:1px solid #222">4 B</td><td style="padding:4px 8px;border-bottom:1px solid #222">width</td><td style="padding:4px 8px;border-bottom:1px solid #222;color:#aaa">uint32_t big-endian</td></tr>
+        <tr><td style="color:#00d4ff;padding:4px 8px;border-bottom:1px solid #222;font-family:monospace">4</td><td style="padding:4px 8px;border-bottom:1px solid #222">4 B</td><td style="padding:4px 8px;border-bottom:1px solid #222">height</td><td style="padding:4px 8px;border-bottom:1px solid #222;color:#aaa">uint32_t big-endian</td></tr>
+        <tr><td style="color:#00d4ff;padding:4px 8px;border-bottom:1px solid #222;font-family:monospace">8</td><td style="padding:4px 8px;border-bottom:1px solid #222">4 B</td><td style="padding:4px 8px;border-bottom:1px solid #222">payload_size</td><td style="padding:4px 8px;border-bottom:1px solid #222;color:#aaa">uint32_t big-endian = width × height × 3</td></tr>
+        <tr><td style="color:#00d4ff;padding:4px 8px;font-family:monospace">12</td><td style="padding:4px 8px">N B</td><td style="padding:4px 8px">pixels</td><td style="padding:4px 8px;color:#aaa">RGB row-major, top-left origin (flipped from GL)</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- D-007 -->
+  <div class="decision">
+    <div class="decision-header">
+      <span class="decision-id">D-007</span>
+      <span class="decision-title">Server UI — what panels to show</span>
+      <span class="decision-tag tag-render">Rendering</span>
+    </div>
+    <div class="decision-body">
+      <div class="decision-row"><strong>Chosen panels:</strong></div>
+      <div class="decision-row">1. <strong>Server Control</strong> — connection status, client IP, frames sent, bytes sent, render FPS.</div>
+      <div class="decision-row">2. <strong>Captured Preview</strong> — <code>ImGui::Image</code> of the last captured framebuffer. Creates a recursive mirror effect (the preview shows a thumbnail of itself from the previous frame). This is intentional and demonstrates the pipeline visually.</div>
+      <div class="decision-row"><strong>Rationale:</strong> The preview confirms what is actually being sent. The mirror-inside-mirror effect is a natural side-effect of capturing the server's own window and is interesting for learning.</div>
+    </div>
+  </div>
+
+  <!-- D-008 -->
+  <div class="decision">
+    <div class="decision-header">
+      <span class="decision-id">D-008</span>
+      <span class="decision-title">Vertical flip — OpenGL origin correction</span>
+      <span class="decision-tag tag-render">Rendering</span>
+    </div>
+    <div class="decision-body">
+      <div class="decision-row"><strong>Problem:</strong> <code>glReadPixels</code> returns pixels with origin at <em>bottom-left</em>. Standard image format (and what the client expects) is top-left origin.</div>
+      <div class="decision-row"><strong>Fix:</strong> After <code>glReadPixels</code>, flip the pixel buffer vertically using <code>std::swap_ranges</code> on row pairs. O(height/2 × width × 3) — for 1280×720 this is ~1.4M swap operations, well within a single frame budget on modern hardware.</div>
+    </div>
+  </div>
+
+  <!-- D-009 -->
+  <div class="decision">
+    <div class="decision-header">
+      <span class="decision-id">D-009</span>
+      <span class="decision-title">SIGPIPE handling on macOS/Linux</span>
+      <span class="decision-tag tag-network">Network</span>
+    </div>
+    <div class="decision-body">
+      <div class="decision-row"><strong>Problem:</strong> Writing to a disconnected TCP socket raises SIGPIPE and kills the process by default. <code>MSG_NOSIGNAL</code> flag (Linux) doesn't exist on macOS.</div>
+      <div class="decision-row"><strong>Fix:</strong> Call <code>signal(SIGPIPE, SIG_IGN)</code> once in <code>main()</code>. The <code>send()</code> call then returns <code>-1</code> with <code>errno=EPIPE</code> instead of killing the process. We detect this in our <code>send_all</code> helper and cleanly close the client socket.</div>
+    </div>
+  </div>
+
+  <!-- D-010 -->
+  <div class="decision">
+    <div class="decision-header">
+      <span class="decision-id">D-010</span>
+      <span class="decision-title">Build system integration</span>
+      <span class="decision-tag tag-build">Build</span>
+    </div>
+    <div class="decision-body">
+      <div class="decision-row"><strong>New targets added to CMakeLists.txt:</strong> <code>stream_server</code> and <code>stream_client</code>. Both link only against the already-present <code>imgui</code>, <code>glfw</code>, <code>OpenGL::GL</code>, and <code>Threads::Threads</code>. No new Conan packages required.</div>
+      <div class="decision-row"><strong>New files:</strong></div>
+    </div>
+  </div>
+</div>
+
+<!-- File map -->
+<div class="section">
+  <h2>File Map</h2>
+  <div class="filemap">
+    <table>
+      <tr><th>File</th><th>Role</th><th>Status</th></tr>
+      <tr><td>app/stream_server.cpp</td><td>Server: GLFW/ImGui window, glReadPixels capture, TCP listen+send</td><td style="color:#4ade80">✓ BUILT</td></tr>
+      <tr><td>app/stream_client.cpp</td><td>Client: GLFW/ImGui window, TCP receive, texture display</td><td style="color:#4ade80">✓ BUILT</td></tr>
+      <tr><td>CMakeLists.txt</td><td>Add stream_server + stream_client build targets</td><td style="color:#4ade80">✓ DONE</td></tr>
+      <tr><td>script/start_stream.sh</td><td>Launch both executables from build/Debug</td><td style="color:#4ade80">✓ DONE</td></tr>
+      <tr><td>doc/decisions.html</td><td>This file — live decision log</td><td style="color:#4ade80">✓ DONE</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- Status log -->
+<div class="section">
+  <h2>Implementation Log</h2>
+  <div class="log">
+    <div class="log-entry">
+      <span class="log-time">step 1</span>
+      <span class="log-phase status-done">Requirements</span>
+      <span class="log-text">Read phase_1.md. Identified producer-consumer loop, TCP framing protocol, and FEC concepts across 6 phases.</span>
+    </div>
+    <div class="log-entry">
+      <span class="log-time">step 2</span>
+      <span class="log-phase status-done">Discovery</span>
+      <span class="log-text">Explored project: CMake + Conan, GLFW + OpenGL + ImGui submodule, spdlog, ASIO, GTest. Existing app (main.cpp) already has DockSpace, font loading, settings system.</span>
+    </div>
+    <div class="log-entry">
+      <span class="log-time">step 3</span>
+      <span class="log-phase status-done">Decisions</span>
+      <span class="log-text">Phase 1 (raw TCP). glReadPixels for capture (no new deps). Dynamic resolution (w/h in header). POSIX sockets. Latest-wins SharedFrame. SIGPIPE ignored. 10 decisions logged (D-001 – D-010).</span>
+    </div>
+    <div class="log-entry">
+      <span class="log-time">step 4</span>
+      <span class="log-phase status-done">Implementation</span>
+      <span class="log-text">Wrote stream_server.cpp (glReadPixels + TCP listen + ImGui preview + stats). Wrote stream_client.cpp (TCP receive + texture upload + ImGui::Image + connection panel). Updated CMakeLists.txt with both targets (no new Conan deps). Fixed ImTextureID cast: reinterpret_cast disallowed from intptr_t→unsigned long long; switched to static_cast&lt;uintptr_t&gt;. Wrote script/start_stream.sh.</span>
+    </div>
+    <div class="log-entry">
+      <span class="log-time">step 5</span>
+      <span class="log-phase status-done">Build</span>
+      <span class="log-text">cmake --preset conan-debug &amp;&amp; cmake --build build/Debug --target stream_server stream_client → both targets compiled and linked cleanly. Binaries: build/Debug/stream_server, build/Debug/stream_client.</span>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
