@@ -87,6 +87,8 @@ target_link_libraries(stream_server PRIVATE
     glfw
     OpenGL::GL
     Threads::Threads
+    nlohmann_json::nlohmann_json
+    spdlog::spdlog_header_only
 )
 if(APPLE)
     target_compile_definitions(stream_server PRIVATE GL_SILENCE_DEPRECATION)
@@ -104,6 +106,8 @@ target_link_libraries(stream_client PRIVATE
     glfw
     OpenGL::GL
     Threads::Threads
+    nlohmann_json::nlohmann_json
+    spdlog::spdlog_header_only
 )
 if(APPLE)
     target_compile_definitions(stream_client PRIVATE GL_SILENCE_DEPRECATION)

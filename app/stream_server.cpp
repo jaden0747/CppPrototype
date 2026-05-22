@@ -4,6 +4,11 @@
 // Renders an ImGui window, captures its own OpenGL framebuffer with
 // glReadPixels after each frame, and streams the pixels to a connected
 // client over TCP using a simple [width][height][len][pixels] protocol.
+//
+// Project infrastructure integrated:
+//   - SettingsItem / SettingsRegistry  — port and log level (stream_server_settings.json)
+//   - Log / ImGuiLogSink               — ANSI-color spdlog + in-window log panel
+//   - dc::SenderPort / ReceiverPort    — zero-copy frame and stats handoff between threads
 // ---------------------------------------------------------------------------
 #ifndef _WIN32
 #  include <sys/socket.h>
@@ -24,6 +29,14 @@
    static void close_sock(sock_t s) { ::closesocket(s); }
 #endif
 
+#include "settings/settings_item.hpp"
+#include "settings/settings_registry.hpp"
+#include "mylib/log.hpp"
+#include "mylib/imgui_log_sink.hpp"
+#include "mylib/data_container.hpp"
+
+#include <nlohmann/json.hpp>
+
 #include <imgui.h>
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
@@ -37,38 +50,55 @@
 #include <string>
 #include <thread>
 #include <vector>
-#include <cstdio>
-
-static constexpr uint16_t SERVER_PORT = 9999;
 
 // ---------------------------------------------------------------------------
-// Shared state between render thread and network thread
+// Settings — loaded from stream_server_settings.json at startup
 // ---------------------------------------------------------------------------
-struct SharedFrame
+struct ServerSettings
 {
-    std::mutex              mtx;
-    std::condition_variable cv;
-    std::vector<uint8_t>    data;   // RGB pixels, top-left origin
-    int                     width  = 0;
-    int                     height = 0;
-    bool                    hasNew = false;
+    int         port     = 9999;
+    std::string logLevel = "info";
+    NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(ServerSettings, port, logLevel)
+};
+static SettingsItem<ServerSettings> g_settings("StreamServerSettings");
+
+// ---------------------------------------------------------------------------
+// Data ports — frame: render thread (producer) → net thread (consumer)
+// ---------------------------------------------------------------------------
+struct FrameData
+{
+    std::vector<uint8_t> pixels;
+    int                  width  = 0;
+    int                  height = 0;
 };
 
-struct NetStats
+static dc::Mempool<FrameData>      g_framePool(3);
+static dc::SenderPort<FrameData>   g_frameSender;
+static dc::ReceiverPort<FrameData> g_frameReceiver;  // owned by net thread
+
+// Condvar lets net thread sleep until a frame arrives (avoids busy-wait)
+static std::mutex              g_frameCvMtx;
+static std::condition_variable g_frameCv;
+
+// ---------------------------------------------------------------------------
+// Data ports — stats: net thread (producer) → render thread (consumer)
+// ---------------------------------------------------------------------------
+struct NetStatsData
 {
-    std::mutex   mtx;
-    uint64_t     bytesSent  = 0;
-    uint64_t     framesSent = 0;
-    bool         connected  = false;
-    std::string  clientAddr;
+    uint64_t    bytesSent  = 0;
+    uint64_t    framesSent = 0;
+    bool        connected  = false;
+    std::string clientAddr;
 };
 
-static SharedFrame       g_frame;
-static NetStats          g_stats;
+static dc::Mempool<NetStatsData>    g_statsPool(2);
+static dc::SenderPort<NetStatsData> g_statsSender;   // owned by net thread
+
+// ---------------------------------------------------------------------------
 static std::atomic<bool> g_running{false};
 
 // ---------------------------------------------------------------------------
-// Helpers: send exactly n bytes (handles partial sends)
+// Helpers: send exactly n bytes
 // ---------------------------------------------------------------------------
 static bool send_all(sock_t fd, const void* buf, size_t n)
 {
@@ -87,7 +117,7 @@ static bool send_all(sock_t fd, const void* buf, size_t n)
     return true;
 }
 
-// Frame wire format: [4B width BE][4B height BE][4B payload_size BE][pixels RGB]
+// Wire format: [4B width BE][4B height BE][4B payload_size BE][pixels RGB]
 static bool send_frame(sock_t fd, const uint8_t* pixels, int w, int h)
 {
     uint32_t bw  = htonl(static_cast<uint32_t>(w));
@@ -100,13 +130,33 @@ static bool send_frame(sock_t fd, const uint8_t* pixels, int w, int h)
     return send_all(fd, hdr, 12) && send_all(fd, pixels, static_cast<size_t>(w * h * 3));
 }
 
+// Push a stats snapshot to the render thread via data ports
+static void deliverStats(uint64_t bytesSent, uint64_t framesSent,
+                          bool connected, const std::string& clientAddr = {})
+{
+    NetStatsData* slot = g_statsSender.reserve();
+    if (!slot) return;
+    slot->bytesSent  = bytesSent;
+    slot->framesSent = framesSent;
+    slot->connected  = connected;
+    slot->clientAddr = clientAddr;
+    g_statsSender.deliver();
+}
+
 // ---------------------------------------------------------------------------
-// Network thread: listen → accept → stream → loop
+// Network thread: listen → accept → stream frames → loop
 // ---------------------------------------------------------------------------
 static void netThread()
 {
+    auto log = Log::get("net");
+
+    // Connect stats sender to its mempool (net thread owns this sender)
+    g_statsSender.connectMempool(g_statsPool);
+
+    const auto port = static_cast<uint16_t>(g_settings->port);
+
     sock_t srv = ::socket(AF_INET, SOCK_STREAM, 0);
-    if (srv < 0) { std::fprintf(stderr, "[net] socket() failed\n"); return; }
+    if (srv < 0) { log->error("socket() failed"); return; }
 
     int opt = 1;
     ::setsockopt(srv, SOL_SOCKET, SO_REUSEADDR, reinterpret_cast<char*>(&opt), sizeof(opt));
@@ -114,78 +164,91 @@ static void netThread()
     sockaddr_in addr{};
     addr.sin_family      = AF_INET;
     addr.sin_addr.s_addr = INADDR_ANY;
-    addr.sin_port        = htons(SERVER_PORT);
+    addr.sin_port        = htons(port);
+
     if (::bind(srv, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) < 0)
     {
-        std::fprintf(stderr, "[net] bind() failed on port %d\n", SERVER_PORT);
+        log->error("bind() failed on port {}", port);
         close_sock(srv);
         return;
     }
     ::listen(srv, 1);
-    std::printf("[net] Listening on TCP :%d\n", SERVER_PORT);
+    log->info("Listening on TCP :{}", port);
 
     while (g_running)
     {
-        // Non-blocking accept via select (1 s timeout so we can check g_running)
+        // Non-blocking accept with 1 s timeout so we can re-check g_running
         fd_set fds;
         FD_ZERO(&fds);
         FD_SET(srv, &fds);
         timeval tv{1, 0};
-        int sel = ::select(static_cast<int>(srv) + 1, &fds, nullptr, nullptr, &tv);
-        if (sel <= 0) continue;
+        if (::select(static_cast<int>(srv) + 1, &fds, nullptr, nullptr, &tv) <= 0)
+            continue;
 
         sockaddr_in caddr{};
-        socklen_t   clen = sizeof(caddr);
-        sock_t client = ::accept(srv, reinterpret_cast<sockaddr*>(&caddr), &clen);
+        socklen_t   clen   = sizeof(caddr);
+        sock_t      client = ::accept(srv, reinterpret_cast<sockaddr*>(&caddr), &clen);
         if (client < 0) continue;
 
         char clientIp[INET_ADDRSTRLEN] = {};
         ::inet_ntop(AF_INET, &caddr.sin_addr, clientIp, sizeof(clientIp));
         std::string addrStr = std::string(clientIp) + ":" + std::to_string(ntohs(caddr.sin_port));
-        std::printf("[net] Client connected: %s\n", addrStr.c_str());
+        log->info("Client connected: {}", addrStr);
 
-        {
-            std::lock_guard<std::mutex> lk(g_stats.mtx);
-            g_stats.connected  = true;
-            g_stats.clientAddr = addrStr;
-        }
+        deliverStats(0, 0, true, addrStr);
+
+        uint64_t bytesSent  = 0;
+        uint64_t framesSent = 0;
 
         while (g_running)
         {
-            // Wait for a new frame (200 ms timeout lets us re-check g_running)
-            std::vector<uint8_t> pixelsCopy;
-            int w = 0, h = 0;
+            // Sleep until the render thread notifies us (or timeout after 200 ms)
             {
-                std::unique_lock<std::mutex> lk(g_frame.mtx);
-                bool got = g_frame.cv.wait_for(lk, std::chrono::milliseconds(200),
-                    [&]{ return g_frame.hasNew || !g_running.load(); });
-                if (!g_running) break;
-                if (!got || !g_frame.hasNew) continue;
-                pixelsCopy = g_frame.data;   // copy while holding lock
-                w = g_frame.width;
-                h = g_frame.height;
-                g_frame.hasNew = false;
+                std::unique_lock<std::mutex> lk(g_frameCvMtx);
+                g_frameCv.wait_for(lk, std::chrono::milliseconds(200));
+            }
+            if (!g_running) break;
+
+            // Promote any pending frame to active
+            g_frameReceiver.update();
+            if (!g_frameReceiver.hasNewData())
+            {
+                g_frameReceiver.cleanup();
+                continue;
             }
 
-            if (!send_frame(client, pixelsCopy.data(), w, h)) break;
-
+            const FrameData* f = g_frameReceiver.getData();
+            if (!f || f->pixels.empty() || f->width <= 0 || f->height <= 0)
             {
-                std::lock_guard<std::mutex> lk(g_stats.mtx);
-                g_stats.bytesSent  += 12 + static_cast<uint64_t>(w * h * 3);
-                g_stats.framesSent++;
+                g_frameReceiver.cleanup();
+                continue;
             }
+
+            if (!send_frame(client, f->pixels.data(), f->width, f->height))
+            {
+                log->warn("send_frame failed — client disconnected");
+                g_frameReceiver.cleanup();
+                break;
+            }
+
+            bytesSent  += 12 + static_cast<uint64_t>(f->width * f->height * 3);
+            framesSent++;
+            g_frameReceiver.cleanup();
+
+            deliverStats(bytesSent, framesSent, true, addrStr);
+
+            if (framesSent % 300 == 0)
+                log->debug("Sent {} frames ({:.2f} MB)", framesSent,
+                           static_cast<double>(bytesSent) / 1e6);
         }
 
         close_sock(client);
-        std::printf("[net] Client disconnected: %s\n", addrStr.c_str());
-        {
-            std::lock_guard<std::mutex> lk(g_stats.mtx);
-            g_stats.connected  = false;
-            g_stats.clientAddr.clear();
-        }
+        log->info("Client disconnected: {}", addrStr);
+        deliverStats(0, 0, false);
     }
 
     close_sock(srv);
+    log->info("Net thread exited");
 }
 
 // ---------------------------------------------------------------------------
@@ -197,8 +260,20 @@ int main()
     WSADATA wsa{};
     WSAStartup(MAKEWORD(2, 2), &wsa);
 #else
-    ::signal(SIGPIPE, SIG_IGN);   // don't die on broken connection
+    ::signal(SIGPIPE, SIG_IGN);
 #endif
+
+    // Load settings (missing file is silently skipped; defaults apply)
+    SettingsRegistry::instance().loadJson("stream_server_settings.json");
+
+    // Initialize logging with ANSI colors + in-window ImGui sink
+    Log::init(g_settings->logLevel, "stream_server.log");
+    auto imguiSink = std::make_shared<ImGuiLogSink_mt>();
+    imguiSink->set_pattern("%^[%H:%M:%S.%e] [%n] [%l] %v%$");
+    Log::addSink(imguiSink);
+    auto log = Log::get("server");
+    log->info("Stream server starting (port={}, logLevel={})",
+              g_settings->port, g_settings->logLevel);
 
     if (!glfwInit()) return 1;
 
@@ -228,15 +303,25 @@ int main()
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init(glslVersion);
 
-    // Texture that shows the captured frame in the "Captured Preview" panel
-    GLuint previewTex = 0;
+    // Preview texture (shows what is being streamed)
+    GLuint previewTex   = 0;
+    bool   previewReady = false;
+    int    previewW     = 0;
+    int    previewH     = 0;
     glGenTextures(1, &previewTex);
     glBindTexture(GL_TEXTURE_2D, previewTex);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    bool previewReady = false;
+
+    // Wire up frame pipeline: render thread → Mempool → SenderPort → ReceiverPort → net thread
+    g_frameSender.connectMempool(g_framePool);
+    g_frameReceiver.connect(g_frameSender);
+
+    // Stats receiver lives on the render thread
+    dc::ReceiverPort<NetStatsData> statsReceiver;
+    statsReceiver.connect(g_statsSender);
 
     g_running.store(true);
     std::thread netThr(netThread);
@@ -246,11 +331,29 @@ int main()
     auto  lastFrameTime = clock::now();
     float renderFps     = 0.0f;
 
+    // Stats snapshot (updated each frame from data ports)
+    uint64_t    bytesSent  = 0;
+    uint64_t    framesSent = 0;
+    bool        connected  = false;
+    std::string clientAddr;
+
     while (!glfwWindowShouldClose(window))
     {
         glfwPollEvents();
 
-        // Render FPS
+        // Pull latest stats from net thread (zero-copy via data ports)
+        statsReceiver.update();
+        if (statsReceiver.hasNewData())
+        {
+            const NetStatsData* s = statsReceiver.getData();
+            bytesSent  = s->bytesSent;
+            framesSent = s->framesSent;
+            connected  = s->connected;
+            clientAddr = s->clientAddr;
+        }
+        statsReceiver.cleanup();
+
+        // Render FPS (exponential moving average, α = 0.05)
         auto  now = clock::now();
         float dt  = std::chrono::duration<float>(now - lastFrameTime).count();
         if (dt > 0.0f) renderFps = renderFps * 0.95f + (1.0f / dt) * 0.05f;
@@ -281,30 +384,26 @@ int main()
 
         // --- Server Control panel -----------------------------------------
         ImGui::Begin("Server Control");
-        ImGui::Text("Render FPS: %.1f", renderFps);
+        ImGui::Text("Render FPS : %.1f", renderFps);
+        ImGui::Text("Port       : %d", g_settings->port);
+        ImGui::Text("Log level  : %s", g_settings->logLevel.c_str());
         ImGui::Separator();
-
+        if (connected)
         {
-            std::lock_guard<std::mutex> lk(g_stats.mtx);
-            if (g_stats.connected)
-            {
-                ImGui::TextColored(ImVec4(0.2f, 1.0f, 0.2f, 1.0f),
-                    "Connected: %s", g_stats.clientAddr.c_str());
-                ImGui::Text("Frames sent : %llu",
-                    static_cast<unsigned long long>(g_stats.framesSent));
-                ImGui::Text("Data sent   : %.2f MB",
-                    static_cast<double>(g_stats.bytesSent) / 1e6);
-            }
-            else
-            {
-                ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.1f, 1.0f),
-                    "Waiting for client on :%d …", SERVER_PORT);
-            }
+            ImGui::TextColored(ImVec4(0.2f, 1.0f, 0.2f, 1.0f),
+                "Connected: %s", clientAddr.c_str());
+            ImGui::Text("Frames sent : %llu",
+                static_cast<unsigned long long>(framesSent));
+            ImGui::Text("Data sent   : %.2f MB",
+                static_cast<double>(bytesSent) / 1e6);
         }
-
+        else
+        {
+            ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.1f, 1.0f),
+                "Waiting for client on :%d …", g_settings->port);
+        }
         ImGui::Separator();
         ImGui::TextDisabled("Protocol: [4B width][4B height][4B len][RGB]");
-        ImGui::TextDisabled("Port: %d  |  Format: RGB 24-bit", SERVER_PORT);
         ImGui::End();
 
         // --- Captured Preview panel ---------------------------------------
@@ -313,12 +412,9 @@ int main()
         if (previewReady)
         {
             ImVec2 avail  = ImGui::GetContentRegionAvail();
-            float  aspect = 16.0f / 9.0f;
-            {
-                std::lock_guard<std::mutex> lk(g_frame.mtx);
-                if (g_frame.height > 0)
-                    aspect = static_cast<float>(g_frame.width) / static_cast<float>(g_frame.height);
-            }
+            float  aspect = previewH > 0
+                ? static_cast<float>(previewW) / static_cast<float>(previewH)
+                : 16.0f / 9.0f;
             float dw = avail.x;
             float dh = dw / aspect;
             if (dh > avail.y) { dh = avail.y; dw = dh * aspect; }
@@ -331,6 +427,9 @@ int main()
         }
         ImGui::End();
 
+        // --- Log panel ----------------------------------------------------
+        imguiSink->draw("Log");
+
         // --- Render -------------------------------------------------------
         ImGui::Render();
         int fbW, fbH;
@@ -342,42 +441,51 @@ int main()
 
         // --- Capture framebuffer AFTER render, BEFORE swap ----------------
         {
-            std::vector<uint8_t> pixels(static_cast<size_t>(fbW * fbH * 3));
-            glReadPixels(0, 0, fbW, fbH, GL_RGB, GL_UNSIGNED_BYTE, pixels.data());
-
-            // OpenGL origin is bottom-left; flip to top-left
-            for (int row = 0; row < fbH / 2; ++row)
+            // Reserve a slot from the mempool for zero-copy frame delivery
+            FrameData* slot = g_frameSender.reserve();
+            if (slot)
             {
-                auto beg = pixels.begin();
-                std::swap_ranges(
-                    beg + row * fbW * 3,
-                    beg + (row + 1) * fbW * 3,
-                    beg + (fbH - 1 - row) * fbW * 3);
+                slot->pixels.resize(static_cast<size_t>(fbW * fbH * 3));
+                glReadPixels(0, 0, fbW, fbH, GL_RGB, GL_UNSIGNED_BYTE,
+                    slot->pixels.data());
+
+                // OpenGL origin is bottom-left; flip to standard top-left
+                for (int row = 0; row < fbH / 2; ++row)
+                {
+                    auto beg = slot->pixels.begin();
+                    std::swap_ranges(
+                        beg + row * fbW * 3,
+                        beg + (row + 1) * fbW * 3,
+                        beg + (fbH - 1 - row) * fbW * 3);
+                }
+                slot->width  = fbW;
+                slot->height = fbH;
+
+                // Upload preview texture while we still own the slot (before deliver)
+                glBindTexture(GL_TEXTURE_2D, previewTex);
+                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, fbW, fbH, 0,
+                    GL_RGB, GL_UNSIGNED_BYTE, slot->pixels.data());
+                previewReady = true;
+                previewW     = fbW;
+                previewH     = fbH;
+
+                // Deliver to net thread; then signal the condvar to wake it
+                g_frameSender.deliver();
+                g_frameCv.notify_one();
             }
-
-            // Update preview texture (GL calls must be on render thread)
-            glBindTexture(GL_TEXTURE_2D, previewTex);
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, fbW, fbH, 0,
-                GL_RGB, GL_UNSIGNED_BYTE, pixels.data());
-            previewReady = true;
-
-            // Hand latest frame to network thread
+            else
             {
-                std::lock_guard<std::mutex> lk(g_frame.mtx);
-                g_frame.data   = std::move(pixels);
-                g_frame.width  = fbW;
-                g_frame.height = fbH;
-                g_frame.hasNew = true;
+                log->warn("Frame pool exhausted — skipping capture this frame");
             }
-            g_frame.cv.notify_one();
         }
 
         glfwSwapBuffers(window);
     }
 
     // --- Shutdown ---------------------------------------------------------
+    log->info("Shutting down");
     g_running.store(false);
-    g_frame.cv.notify_all();
+    g_frameCv.notify_all();   // unblock net thread if it is waiting on the condvar
     netThr.join();
 
     glDeleteTextures(1, &previewTex);
@@ -386,6 +494,10 @@ int main()
     ImGui::DestroyContext();
     glfwDestroyWindow(window);
     glfwTerminate();
+
+    // Persist settings for next run
+    SettingsRegistry::instance().saveJson("stream_server_settings.json");
+    log->info("Settings saved to stream_server_settings.json. Exiting.");
 
 #ifdef _WIN32
     WSACleanup();

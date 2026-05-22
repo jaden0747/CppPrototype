@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Phase 1 — Stream Pipeline Architecture</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'neutral',
+    flowchart: { curve: 'basis', htmlLabels: true },
+    sequence:  { mirrorActors: false, useMaxWidth: true, fontSize: 15 },
+    stateDiagram: { useMaxWidth: true }
+  });
+</script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #f4f6fb; color: #1e293b; padding: 2rem; line-height: 1.6;
+  }
+
+  h1 { text-align: center; color: #1d4ed8; margin-bottom: 0.4rem; font-size: 1.9rem; }
+  .subtitle { text-align: center; color: #64748b; margin-bottom: 0.75rem; font-size: 0.95rem; }
+  .phase-chips {
+    text-align: center; margin-bottom: 3rem;
+    display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap;
+  }
+
+  h2 {
+    color: #1d4ed8; font-size: 1rem; text-transform: uppercase; letter-spacing: 1px;
+    margin-bottom: 1.5rem; padding-bottom: 0.5rem; border-bottom: 1px solid #e2e8f0;
+  }
+  h3 { color: #475569; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.5px; margin: 1.5rem 0 0.75rem; }
+
+  .section { max-width: 1100px; margin: 0 auto 3rem; }
+  .card {
+    background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px;
+    padding: 1.75rem; box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  }
+
+  .diagram-wrap { width: 100%; overflow-x: auto; margin: 1rem 0; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+  th {
+    text-align: left; color: #64748b; padding: 0.6rem 0.8rem;
+    border-bottom: 2px solid #e2e8f0; font-weight: 600; font-size: 0.8rem;
+    text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  td { padding: 0.5rem 0.8rem; border-bottom: 1px solid #f1f5f9; color: #334155; vertical-align: top; }
+  td code {
+    background: #eff6ff; padding: 2px 6px; border-radius: 3px;
+    color: #1d4ed8; font-family: 'Courier New', monospace; font-size: 0.8rem;
+  }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: #f8fafc; }
+
+  .chip { display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 0.8rem; font-weight: 600; }
+  .chip-done  { background: #f0fdf4; color: #15803d; border: 1px solid #86efac; }
+  .chip-phase { background: #eff6ff; color: #1d4ed8; border: 1px solid #93c5fd; }
+  .chip-infra { background: #faf5ff; color: #7c3aed; border: 1px solid #c4b5fd; }
+
+  .tag { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 0.72rem; font-weight: 700; margin: 1px; }
+  .tag-render  { background: #f0fdf4; color: #15803d; border: 1px solid #86efac; }
+  .tag-net     { background: #eff6ff; color: #1d4ed8; border: 1px solid #93c5fd; }
+  .tag-atomic  { background: #fffbeb; color: #b45309; border: 1px solid #fcd34d; }
+  .tag-mutex   { background: #fff7ed; color: #c2410c; border: 1px solid #fdba74; }
+  .tag-condvar { background: #faf5ff; color: #7c3aed; border: 1px solid #c4b5fd; }
+  .tag-ports   { background: #f0fdfa; color: #0d9488; border: 1px solid #5eead4; }
+  .tag-conv    { background: #f0f9ff; color: #0369a1; border: 1px solid #7dd3fc; }
+
+  .note {
+    font-size: 0.82rem; color: #475569; margin-top: 1rem; padding: 0.7rem 1rem;
+    background: #eff6ff; border-left: 3px solid #1d4ed8; border-radius: 0 4px 4px 0;
+  }
+  .note strong { color: #1e293b; }
+  .note-purple {
+    font-size: 0.82rem; color: #475569; margin-top: 1rem; padding: 0.7rem 1rem;
+    background: #faf5ff; border-left: 3px solid #7c3aed; border-radius: 0 4px 4px 0;
+  }
+  .note-purple strong { color: #1e293b; }
+
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  @media (max-width: 780px) { .two-col { grid-template-columns: 1fr; } }
+
+  .mermaid {
+    background: #f8fafc; border-radius: 8px; padding: 1.25rem;
+    margin: 1rem 0; overflow-x: auto; border: 1px solid #e2e8f0;
+  }
+
+  .timeline { display: flex; flex-direction: column; gap: 0; }
+  .step { display: flex; align-items: stretch; }
+  .step-num  { width: 28px; text-align: right; font-size: 0.75rem; color: #94a3b8; padding-top: 0.35rem; flex-shrink: 0; }
+  .step-line {
+    width: 2px; background: #e2e8f0; margin: 0 10px; flex-shrink: 0; position: relative;
+  }
+  .step-line::before {
+    content: '●'; position: absolute; left: -5px; top: 6px;
+    color: #1d4ed8; font-size: 0.65rem;
+  }
+  .step-body  { padding: 0.25rem 0.4rem 0.8rem; flex: 1; }
+  .step-name  { font-weight: 600; font-size: 0.88rem; color: #1e293b; }
+  .step-detail{ font-size: 0.79rem; color: #64748b; margin-top: 2px; }
+  .step-critical .step-name         { color: #b45309; }
+  .step-critical .step-line::before { color: #b45309; }
+  .step-critical .step-line         { background: #fef3c7; }
+  .step-new .step-name              { color: #7c3aed; }
+  .step-new .step-line::before      { color: #7c3aed; }
+  .step-new .step-line              { background: #f3e8ff; }
+
+  .sec-num {
+    display: inline-block; background: #eff6ff; color: #1d4ed8;
+    border: 1px solid #93c5fd; border-radius: 4px; padding: 0 8px;
+    font-size: 0.8rem; font-weight: 700; margin-right: 0.5rem;
+  }
+  .sec-num-purple {
+    display: inline-block; background: #faf5ff; color: #7c3aed;
+    border: 1px solid #c4b5fd; border-radius: 4px; padding: 0 8px;
+    font-size: 0.8rem; font-weight: 700; margin-right: 0.5rem;
+  }
+</style>
+</head>
+<body>
+
+<h1>Phase 1 — Stream Pipeline Architecture</h1>
+<p class="subtitle">Raw RGB over TCP &nbsp;·&nbsp; two-process, two-thread-per-process &nbsp;·&nbsp; No encoding &nbsp;·&nbsp; ~60 FPS target</p>
+<div class="phase-chips">
+  <span class="chip chip-phase">Phase 1</span>
+  <span class="chip chip-done">stream_server ✓</span>
+  <span class="chip chip-done">stream_client ✓</span>
+  <span class="chip chip-done">start_stream.sh ✓</span>
+  <span class="chip chip-infra">Settings ✓</span>
+  <span class="chip chip-infra">Logging ✓</span>
+  <span class="chip chip-infra">Data Ports ✓</span>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     1. SYSTEM TOPOLOGY
+═══════════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="card">
+    <h2><span class="sec-num">1</span>System Topology</h2>
+    <div class="diagram-wrap">
+      <svg viewBox="0 0 900 280" width="100%" style="max-width:900px; font-family:-apple-system,sans-serif;">
+        <defs>
+          <marker id="arr-blue" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0,10 3.5,0 7" fill="#1d4ed8"/>
+          </marker>
+          <marker id="arr-teal" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+            <polygon points="0 0,8 3,0 6" fill="#0d9488"/>
+          </marker>
+          <marker id="arr-purple" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+            <polygon points="0 0,8 3,0 6" fill="#7c3aed"/>
+          </marker>
+        </defs>
+
+        <!-- SERVER PROCESS -->
+        <rect x="8"  y="8"  width="395" height="260" rx="12" fill="#f0f4fb" stroke="#1d4ed8" stroke-width="2"/>
+        <rect x="8"  y="8"  width="395" height="34"  rx="12" fill="#1d4ed8"/>
+        <rect x="8"  y="30" width="395" height="12"  fill="#1d4ed8"/>
+        <text x="206" y="28" text-anchor="middle" fill="#ffffff" font-size="13" font-weight="bold">stream_server</text>
+        <text x="206" y="50" text-anchor="middle" fill="#64748b" font-size="10">app/stream_server.cpp  ·  TCP listen :9999</text>
+
+        <!-- Render thread (server) -->
+        <rect x="22"  y="62" width="140" height="188" rx="6" fill="#f0fdf4" stroke="#15803d" stroke-width="1.5"/>
+        <text x="92" y="78"  text-anchor="middle" fill="#15803d" font-size="10.5" font-weight="bold">Render Thread</text>
+        <text x="92" y="97"  text-anchor="middle" fill="#475569" font-size="9">glfwPollEvents</text>
+        <text x="92" y="112" text-anchor="middle" fill="#7c3aed" font-size="9">statsReceiver.update()</text>
+        <text x="92" y="127" text-anchor="middle" fill="#475569" font-size="9">ImGui build + render</text>
+        <text x="92" y="142" text-anchor="middle" fill="#b45309" font-size="9">glReadPixels ★</text>
+        <text x="92" y="157" text-anchor="middle" fill="#7c3aed" font-size="9">frameSender.reserve()</text>
+        <text x="92" y="172" text-anchor="middle" fill="#475569" font-size="9">flip + previewTex</text>
+        <text x="92" y="187" text-anchor="middle" fill="#7c3aed" font-size="9">frameSender.deliver()</text>
+        <text x="92" y="202" text-anchor="middle" fill="#7c3aed" font-size="9">frameCv.notify_one()</text>
+        <text x="92" y="217" text-anchor="middle" fill="#475569" font-size="9">glfwSwapBuffers</text>
+
+        <!-- Data port nodes (server) -->
+        <rect x="177" y="85" width="108" height="88" rx="6" fill="#f0fdfa" stroke="#0d9488" stroke-width="1.5"/>
+        <text x="231" y="102" text-anchor="middle" fill="#0d9488" font-size="9" font-weight="bold">FRAME DATA PORT</text>
+        <text x="231" y="116" text-anchor="middle" fill="#475569" font-size="8.5">Mempool (3 slots)</text>
+        <text x="231" y="130" text-anchor="middle" fill="#475569" font-size="8.5">SenderPort ← render</text>
+        <text x="231" y="144" text-anchor="middle" fill="#475569" font-size="8.5">ReceiverPort → net</text>
+        <text x="231" y="158" text-anchor="middle" fill="#7c3aed" font-size="8.5">+ condvar wakeup</text>
+
+        <rect x="177" y="183" width="108" height="55" rx="6" fill="#f0fdfa" stroke="#0d9488" stroke-width="1.5"/>
+        <text x="231" y="199" text-anchor="middle" fill="#0d9488" font-size="9" font-weight="bold">STATS DATA PORT</text>
+        <text x="231" y="213" text-anchor="middle" fill="#475569" font-size="8.5">Mempool (2 slots)</text>
+        <text x="231" y="227" text-anchor="middle" fill="#475569" font-size="8.5">SenderPort ← net</text>
+
+        <!-- Net thread (server) -->
+        <rect x="300" y="62" width="90" height="188" rx="6" fill="#eff6ff" stroke="#1d4ed8" stroke-width="1.5"/>
+        <text x="345" y="78"  text-anchor="middle" fill="#1d4ed8" font-size="10.5" font-weight="bold">Net Thread</text>
+        <text x="345" y="97"  text-anchor="middle" fill="#7c3aed" font-size="9">connectMempool()</text>
+        <text x="345" y="112" text-anchor="middle" fill="#475569" font-size="9">bind :9999</text>
+        <text x="345" y="127" text-anchor="middle" fill="#475569" font-size="9">select 1 s</text>
+        <text x="345" y="142" text-anchor="middle" fill="#475569" font-size="9">accept()</text>
+        <text x="345" y="157" text-anchor="middle" fill="#475569" font-size="9">frameCv.wait_for</text>
+        <text x="345" y="172" text-anchor="middle" fill="#7c3aed" font-size="9">frameReceiver</text>
+        <text x="345" y="184" text-anchor="middle" fill="#7c3aed" font-size="9">update/getData</text>
+        <text x="345" y="199" text-anchor="middle" fill="#475569" font-size="9">send_frame()</text>
+        <text x="345" y="214" text-anchor="middle" fill="#7c3aed" font-size="9">statsSender.deliver</text>
+        <text x="345" y="229" text-anchor="middle" fill="#94a3b8" font-size="9">→ TCP wire</text>
+
+        <!-- server arrows -->
+        <line x1="162" y1="130" x2="175" y2="130" stroke="#0d9488" stroke-width="1.5" marker-end="url(#arr-teal)"/>
+        <line x1="285" y1="130" x2="298" y2="130" stroke="#0d9488" stroke-width="1.5" marker-end="url(#arr-teal)"/>
+        <line x1="285" y1="210" x2="175" y2="210" stroke="#0d9488" stroke-width="1.5" marker-end="url(#arr-teal)"/>
+
+        <!-- TCP arrow -->
+        <line x1="408" y1="155" x2="488" y2="155" stroke="#1d4ed8" stroke-width="2.5" marker-end="url(#arr-blue)"/>
+        <text x="448" y="143" text-anchor="middle" fill="#1d4ed8" font-size="11" font-weight="bold">TCP</text>
+        <text x="448" y="169" text-anchor="middle" fill="#64748b" font-size="9">[12B hdr + RGB]</text>
+
+        <!-- CLIENT PROCESS -->
+        <rect x="498" y="8"  width="395" height="260" rx="12" fill="#f0f4fb" stroke="#15803d" stroke-width="2"/>
+        <rect x="498" y="8"  width="395" height="34"  rx="12" fill="#15803d"/>
+        <rect x="498" y="30" width="395" height="12"  fill="#15803d"/>
+        <text x="696" y="28" text-anchor="middle" fill="#ffffff" font-size="13" font-weight="bold">stream_client</text>
+        <text x="696" y="50" text-anchor="middle" fill="#64748b" font-size="10">app/stream_client.cpp  ·  connects to :9999</text>
+
+        <!-- Net thread (client) -->
+        <rect x="512" y="62" width="90" height="188" rx="6" fill="#eff6ff" stroke="#1d4ed8" stroke-width="1.5"/>
+        <text x="557" y="78"  text-anchor="middle" fill="#1d4ed8" font-size="10.5" font-weight="bold">Net Thread</text>
+        <text x="557" y="97"  text-anchor="middle" fill="#7c3aed" font-size="9">connectMempool()</text>
+        <text x="557" y="112" text-anchor="middle" fill="#475569" font-size="9">wait doConnect</text>
+        <text x="557" y="127" text-anchor="middle" fill="#475569" font-size="9">connect()</text>
+        <text x="557" y="142" text-anchor="middle" fill="#475569" font-size="9">recv hdr 12B</text>
+        <text x="557" y="157" text-anchor="middle" fill="#7c3aed" font-size="9">frameSender.reserve</text>
+        <text x="557" y="172" text-anchor="middle" fill="#475569" font-size="9">recv pixels → slot</text>
+        <text x="557" y="187" text-anchor="middle" fill="#7c3aed" font-size="9">frameSender.deliver</text>
+        <text x="557" y="202" text-anchor="middle" fill="#7c3aed" font-size="9">statsSender.deliver</text>
+        <text x="557" y="217" text-anchor="middle" fill="#94a3b8" font-size="9">→ loop</text>
+
+        <!-- Data port nodes (client) -->
+        <rect x="617" y="85" width="108" height="76" rx="6" fill="#f0fdfa" stroke="#0d9488" stroke-width="1.5"/>
+        <text x="671" y="102" text-anchor="middle" fill="#0d9488" font-size="9" font-weight="bold">FRAME DATA PORT</text>
+        <text x="671" y="116" text-anchor="middle" fill="#475569" font-size="8.5">Mempool (3 slots)</text>
+        <text x="671" y="130" text-anchor="middle" fill="#475569" font-size="8.5">SenderPort ← net</text>
+        <text x="671" y="144" text-anchor="middle" fill="#475569" font-size="8.5">ReceiverPort → render</text>
+        <text x="671" y="156" text-anchor="middle" fill="#94a3b8" font-size="8.5">(local in main)</text>
+
+        <rect x="617" y="171" width="108" height="55" rx="6" fill="#f0fdfa" stroke="#0d9488" stroke-width="1.5"/>
+        <text x="671" y="187" text-anchor="middle" fill="#0d9488" font-size="9" font-weight="bold">STATS DATA PORT</text>
+        <text x="671" y="201" text-anchor="middle" fill="#475569" font-size="8.5">Mempool (2 slots)</text>
+        <text x="671" y="215" text-anchor="middle" fill="#475569" font-size="8.5">SenderPort ← net</text>
+
+        <!-- Render thread (client) -->
+        <rect x="740" y="62" width="142" height="188" rx="6" fill="#f0fdf4" stroke="#15803d" stroke-width="1.5"/>
+        <text x="811" y="78"  text-anchor="middle" fill="#15803d" font-size="10.5" font-weight="bold">Render Thread</text>
+        <text x="811" y="97"  text-anchor="middle" fill="#475569" font-size="9">glfwPollEvents</text>
+        <text x="811" y="112" text-anchor="middle" fill="#7c3aed" font-size="9">frameReceiver.update()</text>
+        <text x="811" y="127" text-anchor="middle" fill="#b45309" font-size="9">glTexSubImage2D ★</text>
+        <text x="811" y="142" text-anchor="middle" fill="#7c3aed" font-size="9">statsReceiver.update()</text>
+        <text x="811" y="157" text-anchor="middle" fill="#475569" font-size="9">ImGui panels</text>
+        <text x="811" y="172" text-anchor="middle" fill="#475569" font-size="9">ImGui render</text>
+        <text x="811" y="187" text-anchor="middle" fill="#475569" font-size="9">glfwSwapBuffers</text>
+        <text x="811" y="202" text-anchor="middle" fill="#7c3aed" font-size="9">receiver.cleanup()</text>
+
+        <!-- client arrows -->
+        <line x1="602" y1="125" x2="615" y2="125" stroke="#0d9488" stroke-width="1.5" marker-end="url(#arr-teal)"/>
+        <line x1="725" y1="125" x2="738" y2="125" stroke="#0d9488" stroke-width="1.5" marker-end="url(#arr-teal)"/>
+        <line x1="725" y1="198" x2="602" y2="198" stroke="#0d9488" stroke-width="1.5" marker-end="url(#arr-teal)"/>
+
+        <!-- legend -->
+        <text x="450" y="254" text-anchor="middle" fill="#64748b" font-size="8.5">★ = must run on GL context thread     purple = infrastructure calls</text>
+        <text x="450" y="267" text-anchor="middle" fill="#94a3b8" font-size="8">teal arrows = data port handoff (zero-copy via Mempool slots)</text>
+      </svg>
+    </div>
+    <p class="note"><strong>Two independent OS processes</strong> launched by <code>script/start_stream.sh</code>. All inter-process communication is via TCP. Within each process, frames and stats flow between threads through <strong>data ports</strong> (Mempool + SenderPort + ReceiverPort) — zero-copy, no manual mutex management. The server adds a <code>condition_variable</code> so the net thread can block efficiently rather than polling.</p>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     2. SERVER THREAD MODEL
+═══════════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="card">
+    <h2><span class="sec-num">2</span>Server Thread Model</h2>
+    <h3>2a. Render Thread → FrameData ports → Net Thread (sequence)</h3>
+    <div class="mermaid">
+sequenceDiagram
+  autonumber
+  participant RT as Render Thread
+  participant FP as Frame Port
+  participant CV as frameCv
+  participant NT as Net Thread
+  participant SP as Stats Port
+
+  Note over RT: Setup — frameSender.connectMempool, frameReceiver.connect, statsReceiver.connect
+  Note over NT: Setup — statsSender.connectMempool
+
+  loop Every Frame (vsync ≈ 60 Hz)
+    RT->>RT: glfwPollEvents · FPS calc
+    RT->>SP: statsReceiver.update() → extract snapshot
+    RT->>RT: ImGui build · glClear · RenderDrawData
+    RT->>FP: frameSender.reserve()
+    RT->>RT: glReadPixels into slot.pixels · vertical flip
+    RT->>RT: glTexImage2D(previewTex)
+    RT->>FP: frameSender.deliver()
+    RT-->>CV: frameCv.notify_one()
+    RT->>RT: glfwSwapBuffers
+  end
+
+  loop Net receive loop
+    NT->>CV: wait_for(lk, 200 ms)
+    CV-->>NT: woken by notify or timeout
+    NT->>FP: frameReceiver.update()
+    alt hasNewData
+      NT->>FP: getData() → FrameData*
+      NT->>NT: send_frame(fd, pixels, w, h)
+      NT->>SP: deliverStats(bytesSent, framesSent, addr)
+      NT->>FP: cleanup()
+    else no new frame
+      NT->>FP: cleanup()
+    end
+  end
+    </div>
+    <p class="note"><strong>Zero-copy frame transfer:</strong> The render thread writes pixels directly into the reserved Mempool slot (<code>glReadPixels</code> targets <code>slot→pixels.data()</code>). No copy is made — the net thread reads the same memory via <code>getData()</code>. The Mempool ref-count keeps the slot alive until <code>cleanup()</code> is called.<br><br>
+    <strong>Latest-wins drop policy:</strong> If the render thread produces a second frame before the net thread consumes the first, the new slot replaces the pending slot in <code>g_frameReceiver</code>. The older slot's ref-count reaches zero and is immediately recycled by the pool. The net thread always sends the newest frame.</p>
+
+    <h3>2b. Server Shared-State Reference</h3>
+    <table>
+      <thead>
+        <tr><th>Variable</th><th>Type</th><th>Written by</th><th>Read by</th><th>Guard</th><th>Purpose</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>g_framePool</code></td><td><code>Mempool&lt;FrameData&gt;(3)</code></td>
+          <td colspan="2">Both threads — via SenderPort/ReceiverPort internal locks</td>
+          <td><span class="tag tag-ports">data ports</span></td>
+          <td>Pre-allocated pixel buffer slots; ring-buffer eviction</td>
+        </tr>
+        <tr>
+          <td><code>g_frameSender</code></td><td><code>SenderPort&lt;FrameData&gt;</code></td>
+          <td><span class="tag tag-render">Render</span> reserve/deliver</td><td><span class="tag tag-net">Net</span> via receiver</td>
+          <td><span class="tag tag-ports">data ports</span></td>
+          <td>Producer side — render thread fills and delivers frames</td>
+        </tr>
+        <tr>
+          <td><code>g_frameReceiver</code></td><td><code>ReceiverPort&lt;FrameData&gt;</code></td>
+          <td>Populated by deliver()</td><td><span class="tag tag-net">Net</span> update/get/cleanup</td>
+          <td><span class="tag tag-ports">data ports</span></td>
+          <td>Consumer side — net thread polls for new frames</td>
+        </tr>
+        <tr>
+          <td><code>g_frameCv / g_frameCvMtx</code></td><td><code>condvar / mutex</code></td>
+          <td><span class="tag tag-render">Render</span> notify_one</td><td><span class="tag tag-net">Net</span> wait_for</td>
+          <td><span class="tag tag-condvar">condvar</span></td>
+          <td>Wake net thread when a frame is ready; avoids busy-wait</td>
+        </tr>
+        <tr>
+          <td><code>g_statsPool</code></td><td><code>Mempool&lt;NetStatsData&gt;(2)</code></td>
+          <td colspan="2">Both threads — via data port internals</td>
+          <td><span class="tag tag-ports">data ports</span></td>
+          <td>Pre-allocated stats slots</td>
+        </tr>
+        <tr>
+          <td><code>g_statsSender</code></td><td><code>SenderPort&lt;NetStatsData&gt;</code></td>
+          <td><span class="tag tag-net">Net</span> reserve/deliver</td><td><span class="tag tag-render">Render</span> via statsReceiver</td>
+          <td><span class="tag tag-ports">data ports</span></td>
+          <td>Net thread pushes bytesSent/framesSent/connected/clientAddr each frame</td>
+        </tr>
+        <tr>
+          <td><code>statsReceiver</code></td><td><code>ReceiverPort&lt;NetStatsData&gt;</code></td>
+          <td>Populated by deliver()</td><td><span class="tag tag-render">Render</span> update/get/cleanup</td>
+          <td><span class="tag tag-ports">data ports</span></td>
+          <td>Local variable in main() — render thread polls for UI display</td>
+        </tr>
+        <tr>
+          <td><code>g_settings</code></td><td><code>SettingsItem&lt;ServerSettings&gt;</code></td>
+          <td>main() — loadJson() once</td><td><span class="tag tag-net">Net</span> reads port</td>
+          <td><span class="tag tag-conv">read-only after init</span></td>
+          <td>Port number and log level; written once at startup</td>
+        </tr>
+        <tr>
+          <td><code>g_running</code></td><td><code>atomic&lt;bool&gt;</code></td>
+          <td><span class="tag tag-render">Render</span> (shutdown)</td><td><span class="tag tag-net">Net</span></td>
+          <td><span class="tag tag-atomic">atomic</span></td>
+          <td>Global stop signal; condvar predicate re-checks this</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     3. CLIENT THREAD MODEL
+═══════════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="card">
+    <h2><span class="sec-num">3</span>Client Thread Model</h2>
+    <h3>3a. Net Thread → FrameData ports → Render Thread (sequence)</h3>
+    <div class="mermaid">
+sequenceDiagram
+  autonumber
+  participant NT as Net Thread
+  participant FP as Frame Port
+  participant SP as Stats Port
+  participant RT as Render Thread
+
+  Note over NT: Setup — frameSender.connectMempool, statsSender.connectMempool
+  Note over RT: Setup — frameReceiver.connect, statsReceiver.connect
+
+  RT->>NT: Click Connect — g_serverIp/Port set, g_doConnect=true
+  NT->>NT: socket() · inet_pton() · connect()
+  NT->>SP: deliverStats(connected=true, "Connected")
+
+  loop Per Frame (net thread)
+    NT->>NT: recv_all(hdr, 12 B)
+    NT->>FP: frameSender.reserve()
+    NT->>NT: recv_all(pixels) into slot.pixels
+    NT->>FP: frameSender.deliver()
+    NT->>SP: deliverStats(bytesRecv, fps, frames)
+  end
+
+  loop Render Loop (~vsync)
+    RT->>FP: frameReceiver.update()
+    alt hasNewData
+      FP-->>RT: const FrameData*
+      RT->>RT: glTexImage2D or glTexSubImage2D
+      RT->>FP: cleanup()
+    else no new frame
+      RT->>FP: cleanup()
+    end
+    RT->>SP: statsReceiver.update() → extract → cleanup()
+    RT->>RT: ImGui panels · RenderDrawData · glfwSwapBuffers
+  end
+
+  NT->>NT: recv fails → close_sock · g_doConnect=false
+  NT->>SP: deliverStats(connected=false, "Disconnected")
+    </div>
+    <p class="note"><strong>Zero-copy recv:</strong> The net thread calls <code>g_frameSender.reserve()</code> before receiving pixels, then passes <code>slot→pixels.data()</code> directly to <code>recv_all()</code>. Pixels land in the Mempool slot without an intermediate buffer.<br><br>
+    <strong>No condvar on client:</strong> The render thread polls <code>frameReceiver.update()</code> every vsync. The render loop runs regardless — it displays the last good texture when no new frame has arrived. A condvar would add complexity with no benefit here.</p>
+
+    <h3>3b. Client Connection State Machine</h3>
+    <div class="mermaid">
+stateDiagram-v2
+  direction LR
+  [*] --> Disconnected
+
+  Disconnected --> Connecting : Click Connect\nwrite g_serverIp/Port\ng_doConnect = true
+
+  Connecting --> Connected : connect() succeeds\nstatus = "Connected"\nconnected = true
+
+  Connecting --> Disconnected : socket() or connect() fails\ng_doConnect = false
+
+  Connected --> Disconnected : recv() ≤ 0\nor len > 64 MB sanity\nor Click Disconnect\ng_doConnect = false
+
+  Disconnected --> [*] : glfwWindowShouldClose\ng_running = false
+  Connected --> [*] : glfwWindowShouldClose\ng_running = false
+    </div>
+
+    <h3>3c. Client Shared-State Reference</h3>
+    <table>
+      <thead>
+        <tr><th>Variable</th><th>Type</th><th>Written by</th><th>Read by</th><th>Guard</th><th>Purpose</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>g_framePool</code></td><td><code>Mempool&lt;FrameData&gt;(3)</code></td>
+          <td colspan="2">Both threads — via data port internals</td>
+          <td><span class="tag tag-ports">data ports</span></td>
+          <td>Pre-allocated pixel buffer slots</td>
+        </tr>
+        <tr>
+          <td><code>g_frameSender</code></td><td><code>SenderPort&lt;FrameData&gt;</code></td>
+          <td><span class="tag tag-net">Net</span> reserve/deliver</td><td><span class="tag tag-render">Render</span> via frameReceiver</td>
+          <td><span class="tag tag-ports">data ports</span></td>
+          <td>Net thread receives pixels directly into reserved slot and delivers</td>
+        </tr>
+        <tr>
+          <td><code>frameReceiver</code></td><td><code>ReceiverPort&lt;FrameData&gt;</code></td>
+          <td>Populated by deliver()</td><td><span class="tag tag-render">Render</span> update/get/cleanup</td>
+          <td><span class="tag tag-ports">data ports</span></td>
+          <td>Local in main() — polled each vsync for GL texture upload</td>
+        </tr>
+        <tr>
+          <td><code>g_statsPool / g_statsSender</code></td><td><code>Mempool / SenderPort&lt;ClientStatsData&gt;</code></td>
+          <td><span class="tag tag-net">Net</span></td><td><span class="tag tag-render">Render</span> via statsReceiver</td>
+          <td><span class="tag tag-ports">data ports</span></td>
+          <td>fps, bytesRecv, framesRecv, connected, status — updated each received frame</td>
+        </tr>
+        <tr>
+          <td><code>statsReceiver</code></td><td><code>ReceiverPort&lt;ClientStatsData&gt;</code></td>
+          <td>Populated by deliver()</td><td><span class="tag tag-render">Render</span></td>
+          <td><span class="tag tag-ports">data ports</span></td>
+          <td>Local in main() — drives Connection panel UI</td>
+        </tr>
+        <tr>
+          <td><code>g_doConnect</code></td><td><code>atomic&lt;bool&gt;</code></td>
+          <td><span class="tag tag-render">Render</span> (UI)</td><td><span class="tag tag-net">Net</span></td>
+          <td><span class="tag tag-atomic">atomic</span></td>
+          <td>Connect trigger AND maintain-connection flag</td>
+        </tr>
+        <tr>
+          <td><code>g_serverIp / g_serverPort</code></td><td><code>string / int</code></td>
+          <td><span class="tag tag-render">Render</span> (before doConnect)</td><td><span class="tag tag-net">Net</span> (snapshot once)</td>
+          <td><span class="tag tag-conv">by-convention ¹</span></td>
+          <td>Initialized from settings; written before atomic store provides happens-before</td>
+        </tr>
+        <tr>
+          <td><code>g_settings</code></td><td><code>SettingsItem&lt;ClientSettings&gt;</code></td>
+          <td>main() — loadJson() once</td><td><span class="tag tag-render">Render</span> UI display</td>
+          <td><span class="tag tag-conv">read-only after init</span></td>
+          <td>serverIp, serverPort, logLevel defaults</td>
+        </tr>
+        <tr>
+          <td><code>g_running</code></td><td><code>atomic&lt;bool&gt;</code></td>
+          <td><span class="tag tag-render">Render</span> (shutdown)</td><td><span class="tag tag-net">Net</span></td>
+          <td><span class="tag tag-atomic">atomic</span></td>
+          <td>Global stop signal</td>
+        </tr>
+      </tbody>
+    </table>
+    <p class="note">¹ <strong>g_serverIp/Port safety:</strong> written before <code>g_doConnect.store(true, seq_cst)</code>, read after <code>g_doConnect.load(seq_cst)</code>. Sequential-consistency provides the happens-before edge.</p>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     4. END-TO-END FRAME PIPELINE
+═══════════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="card">
+    <h2><span class="sec-num">4</span>End-to-End Frame Pipeline</h2>
+    <div class="mermaid">
+flowchart LR
+  subgraph SRV["🖥  Server Process"]
+    direction TB
+    A["frameSender.reserve()\nget free Mempool slot"]
+    B["glReadPixels → slot.pixels\nVertical flip in-place"]
+    C["frameSender.deliver()\nfan-out to frameReceiver"]
+    D["frameCv.notify_one()"]
+    E["frameReceiver.update()\nhasNewData → getData()"]
+    F["send_frame()\n12B hdr + pixels"]
+  end
+
+  subgraph WIRE["🔌  TCP Wire"]
+    G["Header  12 B\n[width][height][len]"]
+    H["Pixel Data\nw × h × 3 B · RGB"]
+  end
+
+  subgraph CLI["📺  Client Process"]
+    direction TB
+    I["frameSender.reserve()\nget free Mempool slot"]
+    J["recv_all(hdr 12B)"]
+    K["recv_all(pixels)\ndirectly into slot.pixels"]
+    L["frameSender.deliver()"]
+    M["frameReceiver.update()\nhasNewData"]
+    N["glTexSubImage2D\nor glTexImage2D"]
+    O["ImGui::Image\naspect-ratio centred"]
+  end
+
+  A --> B --> C --> D --> E --> F -- "TCP" --> G --> H -- "recv" --> J --> I --> K --> L --> M --> N --> O
+    </div>
+    <p class="note"><strong>Zero-copy path:</strong> On the server, <code>glReadPixels</code> writes directly into the Mempool slot. On the client, <code>recv_all</code> writes directly into the Mempool slot. Neither side makes an intermediate copy — pixels land once in pre-allocated memory and are consumed in-place.</p>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     5. WIRE PROTOCOL
+═══════════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="card">
+    <h2><span class="sec-num">5</span>Wire Protocol — Frame Format</h2>
+    <div class="diagram-wrap">
+      <svg viewBox="0 0 860 130" width="100%" style="max-width:860px; font-family:-apple-system,sans-serif;">
+        <rect x="10"  y="28" width="162" height="58" rx="5" fill="#eff6ff" stroke="#1d4ed8" stroke-width="1.5"/>
+        <text x="91"  y="50" text-anchor="middle" fill="#1d4ed8" font-size="12" font-weight="bold">width</text>
+        <text x="91"  y="66" text-anchor="middle" fill="#475569" font-size="9.5">uint32_t · big-endian</text>
+        <text x="91"  y="80" text-anchor="middle" fill="#64748b" font-size="8.5">= htonl(fbW)</text>
+        <text x="91"  y="14" text-anchor="middle" fill="#94a3b8" font-size="9">bytes 0 – 3</text>
+
+        <rect x="180" y="28" width="162" height="58" rx="5" fill="#eff6ff" stroke="#1d4ed8" stroke-width="1.5"/>
+        <text x="261" y="50" text-anchor="middle" fill="#1d4ed8" font-size="12" font-weight="bold">height</text>
+        <text x="261" y="66" text-anchor="middle" fill="#475569" font-size="9.5">uint32_t · big-endian</text>
+        <text x="261" y="80" text-anchor="middle" fill="#64748b" font-size="8.5">= htonl(fbH)</text>
+        <text x="261" y="14" text-anchor="middle" fill="#94a3b8" font-size="9">bytes 4 – 7</text>
+
+        <rect x="350" y="28" width="162" height="58" rx="5" fill="#eff6ff" stroke="#1d4ed8" stroke-width="1.5"/>
+        <text x="431" y="50" text-anchor="middle" fill="#1d4ed8" font-size="12" font-weight="bold">payload_size</text>
+        <text x="431" y="66" text-anchor="middle" fill="#475569" font-size="9.5">uint32_t · big-endian</text>
+        <text x="431" y="80" text-anchor="middle" fill="#64748b" font-size="8.5">= width × height × 3</text>
+        <text x="431" y="14" text-anchor="middle" fill="#94a3b8" font-size="9">bytes 8 – 11</text>
+
+        <line x1="10"  y1="100" x2="512" y2="100" stroke="#cbd5e1" stroke-width="1"/>
+        <line x1="10"  y1="96"  x2="10"  y2="104" stroke="#cbd5e1" stroke-width="1"/>
+        <line x1="512" y1="96"  x2="512" y2="104" stroke="#cbd5e1" stroke-width="1"/>
+        <text x="261" y="115" text-anchor="middle" fill="#64748b" font-size="9">12-byte fixed header</text>
+
+        <rect x="530" y="28" width="320" height="58" rx="5" fill="#f0fdf4" stroke="#15803d" stroke-width="1.5"/>
+        <text x="690" y="50" text-anchor="middle" fill="#15803d" font-size="12" font-weight="bold">RGB pixel data</text>
+        <text x="690" y="66" text-anchor="middle" fill="#475569" font-size="9.5">width × height × 3 bytes  ·  top-left origin  ·  row-major</text>
+        <text x="690" y="80" text-anchor="middle" fill="#64748b" font-size="8.5">R G B  R G B  …  (no padding)</text>
+        <text x="690" y="14" text-anchor="middle" fill="#94a3b8" font-size="9">bytes 12 … 12 + payload_size − 1</text>
+
+        <line x1="530" y1="100" x2="850" y2="100" stroke="#cbd5e1" stroke-width="1"/>
+        <line x1="530" y1="96"  x2="530" y2="104" stroke="#cbd5e1" stroke-width="1"/>
+        <line x1="850" y1="96"  x2="850" y2="104" stroke="#cbd5e1" stroke-width="1"/>
+        <text x="690" y="115" text-anchor="middle" fill="#64748b" font-size="9">variable-length payload</text>
+      </svg>
+    </div>
+    <p class="note">Client enforces <code>len ≤ 64 MB</code> before allocating the Mempool slot to guard against corrupt headers causing runaway allocations. If the pool is exhausted, the client drains the socket bytes to stay in sync but skips the GL upload for that frame.</p>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     6. SERVER RENDER-LOOP STEP ORDERING
+═══════════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="card">
+    <h2><span class="sec-num">6</span>Server Render-Loop Step Ordering</h2>
+    <p style="font-size:0.85rem;color:#888;margin-bottom:1.25rem">
+      The data-port capture step wraps the <code>glReadPixels</code> call. All steps must stay in this order.
+    </p>
+    <div class="two-col">
+      <div>
+        <h3>Correct Order (implemented)</h3>
+        <div class="timeline">
+          <div class="step">
+            <div class="step-num">1</div><div class="step-line"></div>
+            <div class="step-body">
+              <div class="step-name">glfwPollEvents · FPS calc · statsReceiver.update()</div>
+              <div class="step-detail">Poll window events; pull latest stats from net thread via data ports</div>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-num">2</div><div class="step-line"></div>
+            <div class="step-body">
+              <div class="step-name">ImGui build + ImGui::Render</div>
+              <div class="step-detail">Builds ImGui draw lists in CPU memory; no GL calls yet</div>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-num">3</div><div class="step-line"></div>
+            <div class="step-body">
+              <div class="step-name">glClear + ImGui_RenderDrawData</div>
+              <div class="step-detail">Emits all OpenGL draw calls — back buffer now has the current frame</div>
+            </div>
+          </div>
+          <div class="step step-new">
+            <div class="step-num">4</div><div class="step-line"></div>
+            <div class="step-body">
+              <div class="step-name">g_frameSender.reserve() — get Mempool slot</div>
+              <div class="step-detail">Acquires a free pre-allocated pixel buffer from the pool</div>
+            </div>
+          </div>
+          <div class="step step-critical">
+            <div class="step-num">5</div><div class="step-line"></div>
+            <div class="step-body">
+              <div class="step-name">glReadPixels → slot.pixels ← CAPTURE</div>
+              <div class="step-detail">Reads fully rendered back buffer directly into the Mempool slot. Stalls GPU until all draw commands finish.</div>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-num">6</div><div class="step-line"></div>
+            <div class="step-body">
+              <div class="step-name">Vertical flip · glTexImage2D(previewTex)</div>
+              <div class="step-detail">CPU flip while slot is still owned by sender; preview uploaded before deliver</div>
+            </div>
+          </div>
+          <div class="step step-new">
+            <div class="step-num">7</div><div class="step-line"></div>
+            <div class="step-body">
+              <div class="step-name">g_frameSender.deliver() · g_frameCv.notify_one()</div>
+              <div class="step-detail">Transfer slot ownership to net thread; signal condvar to wake it</div>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-num">8</div><div class="step-line"></div>
+            <div class="step-body">
+              <div class="step-name">glfwSwapBuffers</div>
+              <div class="step-detail">Swaps back→front. Back buffer is now undefined until next glClear.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <h3>Why Order Matters</h3>
+        <table>
+          <thead><tr><th>If glReadPixels placed…</th><th>Result</th></tr></thead>
+          <tbody>
+            <tr><td>Before <code>glClear</code></td><td>Reads previous frame — one frame behind</td></tr>
+            <tr><td>After <code>glClear</code>, before <code>RenderDrawData</code></td><td>Reads cleared (blank) framebuffer</td></tr>
+            <tr><td><strong>After <code>RenderDrawData</code>, before <code>SwapBuffers</code></strong></td><td><strong>✓ Current fully rendered frame</strong></td></tr>
+            <tr><td>After <code>SwapBuffers</code></td><td>Front buffer — undefined on many drivers</td></tr>
+          </tbody>
+        </table>
+        <div class="note" style="margin-top:1rem">
+          <strong>Preview upload before deliver:</strong> <code>glTexImage2D(previewTex)</code> uses <code>slot→pixels.data()</code> before calling <code>deliver()</code>. Once <code>deliver()</code> is called, the slot is owned by the receiver and must not be read. The GL call is synchronous so this ordering is safe.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     7. SHARED STATE ACCESS MAP
+═══════════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="card">
+    <h2><span class="sec-num">7</span>Shared State Access Map</h2>
+    <p style="font-size:0.85rem;color:#888;margin-bottom:1.25rem">Every shared variable across both apps. Manual mutexes are gone — data ports carry their own internal locks. The only explicit locks remaining are the condvar mutex (server) and the atomics for control flow.</p>
+    <div class="two-col">
+      <div>
+        <h3>stream_server</h3>
+        <table>
+          <thead><tr><th>Variable</th><th>Writer</th><th>Reader</th><th>Sync</th></tr></thead>
+          <tbody>
+            <tr><td><code>g_frameSender/Receiver</code></td><td><span class="tag tag-render">Render</span></td><td><span class="tag tag-net">Net</span></td><td><span class="tag tag-ports">data ports</span></td></tr>
+            <tr><td><code>g_framePool</code></td><td colspan="2">Both (internal)</td><td><span class="tag tag-ports">data ports</span></td></tr>
+            <tr><td><code>g_frameCv / Mtx</code></td><td><span class="tag tag-render">Render</span> notify</td><td><span class="tag tag-net">Net</span> wait</td><td><span class="tag tag-condvar">condvar</span></td></tr>
+            <tr><td><code>g_statsSender / statsReceiver</code></td><td><span class="tag tag-net">Net</span></td><td><span class="tag tag-render">Render</span></td><td><span class="tag tag-ports">data ports</span></td></tr>
+            <tr><td><code>g_settings</code></td><td>main() once</td><td><span class="tag tag-net">Net</span> reads port</td><td><span class="tag tag-conv">read-only</span></td></tr>
+            <tr><td><code>g_running</code></td><td><span class="tag tag-render">Render</span></td><td><span class="tag tag-net">Net</span></td><td><span class="tag tag-atomic">atomic</span></td></tr>
+          </tbody>
+        </table>
+        <div class="note" style="margin-top:0.75rem">No user-managed mutex. Data ports internals handle all locking. Lock ordering: data port mutexes never nest — deadlock structurally impossible.</div>
+      </div>
+      <div>
+        <h3>stream_client</h3>
+        <table>
+          <thead><tr><th>Variable</th><th>Writer</th><th>Reader</th><th>Sync</th></tr></thead>
+          <tbody>
+            <tr><td><code>g_frameSender / frameReceiver</code></td><td><span class="tag tag-net">Net</span></td><td><span class="tag tag-render">Render</span></td><td><span class="tag tag-ports">data ports</span></td></tr>
+            <tr><td><code>g_framePool</code></td><td colspan="2">Both (internal)</td><td><span class="tag tag-ports">data ports</span></td></tr>
+            <tr><td><code>g_statsSender / statsReceiver</code></td><td><span class="tag tag-net">Net</span></td><td><span class="tag tag-render">Render</span></td><td><span class="tag tag-ports">data ports</span></td></tr>
+            <tr><td><code>g_doConnect</code></td><td><span class="tag tag-render">Render</span></td><td><span class="tag tag-net">Net</span></td><td><span class="tag tag-atomic">atomic</span></td></tr>
+            <tr><td><code>g_serverIp / Port</code></td><td><span class="tag tag-render">Render</span></td><td><span class="tag tag-net">Net</span></td><td><span class="tag tag-conv">by-convention</span></td></tr>
+            <tr><td><code>g_settings</code></td><td>main() once</td><td><span class="tag tag-render">Render</span></td><td><span class="tag tag-conv">read-only</span></td></tr>
+            <tr><td><code>g_running</code></td><td><span class="tag tag-render">Render</span></td><td><span class="tag tag-net">Net</span></td><td><span class="tag tag-atomic">atomic</span></td></tr>
+          </tbody>
+        </table>
+        <div class="note" style="margin-top:0.75rem">Same: no user-managed mutex. The only explicit lock is inside the data port internals.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     8. INFRASTRUCTURE INTEGRATION
+═══════════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="card">
+    <h2><span class="sec-num-purple">8</span>Infrastructure Integration</h2>
+    <p style="font-size:0.85rem;color:#888;margin-bottom:1.25rem">Both apps use the project's three shared subsystems: Settings, Logging, and Data Ports.</p>
+
+    <h3>8a. Settings — SettingsItem / SettingsRegistry</h3>
+    <div class="two-col">
+      <div>
+        <table>
+          <thead><tr><th>App</th><th>Struct</th><th>Key</th><th>File</th></tr></thead>
+          <tbody>
+            <tr><td>Server</td><td><code>ServerSettings</code></td><td><code>"StreamServerSettings"</code></td><td><code>stream_server_settings.json</code></td></tr>
+            <tr><td>Client</td><td><code>ClientSettings</code></td><td><code>"StreamClientSettings"</code></td><td><code>stream_client_settings.json</code></td></tr>
+          </tbody>
+        </table>
+        <table style="margin-top:1rem">
+          <thead><tr><th>App</th><th>Field</th><th>Default</th><th>Effect</th></tr></thead>
+          <tbody>
+            <tr><td>Server</td><td><code>port</code></td><td>9999</td><td>TCP bind port</td></tr>
+            <tr><td>Server</td><td><code>logLevel</code></td><td>"info"</td><td>spdlog level at startup</td></tr>
+            <tr><td>Client</td><td><code>serverIp</code></td><td>"127.0.0.1"</td><td>Pre-fills IP input; saved on exit</td></tr>
+            <tr><td>Client</td><td><code>serverPort</code></td><td>9999</td><td>Pre-fills port input; saved on exit</td></tr>
+            <tr><td>Client</td><td><code>logLevel</code></td><td>"info"</td><td>spdlog level at startup</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div>
+        <div class="mermaid">
+flowchart TB
+  A["stream_server_settings.json\nor stream_client_settings.json"]
+  B["SettingsRegistry\n.loadJson()"]
+  C["SettingsItem&lt;ServerSettings&gt;\ng_settings"]
+  D["g_settings-&gt;port\ng_settings-&gt;logLevel"]
+  E["saveJson() on exit\npersists last-used values"]
+  A --> B --> C --> D
+  C --> E
+        </div>
+        <p class="note-purple"><strong>First run:</strong> if the JSON file doesn't exist, defaults apply and the file is created on exit. Subsequent runs pick up any edits made to the file.</p>
+      </div>
+    </div>
+
+    <h3>8b. Logging — Log / spdlog / ImGuiLogSink</h3>
+    <div class="mermaid">
+flowchart LR
+  subgraph Loggers
+    A["Log::get('server')\nor Log::get('client')"]
+    B["Log::get('net')"]
+  end
+  subgraph Sinks
+    C["ansicolor_stdout_sink_mt\nANSI colors in terminal\n(fwrite-based, works in pipes)"]
+    D["basic_file_sink_mt\nPlain text\nstream_server.log / stream_client.log"]
+    E["ImGuiLogSink_mt\nIn-window 'Log' panel\ncolor-coded by level"]
+  end
+  A --> C
+  A --> D
+  A --> E
+  B --> C
+  B --> D
+  B --> E
+    </div>
+    <table style="margin-top:1rem">
+      <thead><tr><th>Level</th><th>Terminal color</th><th>ImGui color</th><th>Used for</th></tr></thead>
+      <tbody>
+        <tr><td><code>trace</code></td><td>white</td><td>gray</td><td>Per-frame verbose (not used in production)</td></tr>
+        <tr><td><code>debug</code></td><td>cyan</td><td>light blue</td><td>Periodic stats every 300 frames</td></tr>
+        <tr><td><code>info</code></td><td>green</td><td>green</td><td>Connect / disconnect / startup / shutdown</td></tr>
+        <tr><td><code>warn</code></td><td>yellow</td><td>yellow</td><td>Pool exhausted, send/recv failure, bad IP</td></tr>
+        <tr><td><code>error</code></td><td>red</td><td>red</td><td>socket() / bind() failures, sanity violations</td></tr>
+        <tr><td><code>critical</code></td><td>magenta</td><td>magenta</td><td>Fatal initialization errors</td></tr>
+      </tbody>
+    </table>
+
+    <h3>8c. Data Ports Topology</h3>
+    <div class="two-col">
+      <div>
+        <p style="font-size:0.8rem;color:#888;margin-bottom:0.5rem">stream_server</p>
+        <div class="mermaid">
+flowchart TB
+  subgraph Frame["Frame Pipeline  (Render → Net)"]
+    P["g_framePool\nMempool&lt;FrameData&gt; · 3 slots"]
+    S["g_frameSender\nSenderPort\nrender thread"]
+    R["g_frameReceiver\nReceiverPort\nnet thread"]
+    CV["g_frameCv\ncondvar notification"]
+    P -->|connectMempool| S
+    S -->|deliver| R
+    S -.->|notify_one| CV
+    CV -.->|wakes| R
+  end
+  subgraph Stats["Stats Pipeline  (Net → Render)"]
+    SP["g_statsPool\nMempool&lt;NetStatsData&gt; · 2 slots"]
+    SS["g_statsSender\nSenderPort\nnet thread"]
+    SR["statsReceiver\nReceiverPort\nin main()"]
+    SP -->|connectMempool| SS
+    SS -->|deliver| SR
+  end
+        </div>
+      </div>
+      <div>
+        <p style="font-size:0.8rem;color:#888;margin-bottom:0.5rem">stream_client</p>
+        <div class="mermaid">
+flowchart TB
+  subgraph Frame["Frame Pipeline  (Net → Render)"]
+    P["g_framePool\nMempool&lt;FrameData&gt; · 3 slots"]
+    S["g_frameSender\nSenderPort\nnet thread"]
+    R["frameReceiver\nReceiverPort\nin main()"]
+    P -->|connectMempool| S
+    S -->|deliver| R
+  end
+  subgraph Stats["Stats Pipeline  (Net → Render)"]
+    SP["g_statsPool\nMempool&lt;ClientStatsData&gt; · 2 slots"]
+    SS["g_statsSender\nSenderPort\nnet thread"]
+    SR["statsReceiver\nReceiverPort\nin main()"]
+    SP -->|connectMempool| SS
+    SS -->|deliver| SR
+  end
+        </div>
+      </div>
+    </div>
+    <p class="note-purple"><strong>Pool sizing rationale (3 slots):</strong> At steady state one slot is active in the receiver, one is pending (latest delivered), and one is being filled by the producer. A 3-slot pool ensures the producer never blocks. The 2-slot stats pool is sufficient because stats updates are infrequent relative to frame delivery.</p>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     9. FILE MAP
+═══════════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="card">
+    <h2><span class="sec-num">9</span>File Map</h2>
+    <table>
+      <thead><tr><th>File</th><th>CMake Target</th><th>Role</th></tr></thead>
+      <tbody>
+        <tr><td><code>app/stream_server.cpp</code></td><td><code>stream_server</code></td><td>Server: render loop · glReadPixels · data ports · TCP listen/send</td></tr>
+        <tr><td><code>app/stream_client.cpp</code></td><td><code>stream_client</code></td><td>Client: TCP connect/recv · data ports · GL texture upload · display</td></tr>
+        <tr><td><code>script/start_stream.sh</code></td><td>—</td><td>Launches both binaries; trap cleanup on exit</td></tr>
+        <tr><td><code>stream_server_settings.json</code></td><td>— (build dir)</td><td>Server runtime config: port, logLevel. Created on first exit.</td></tr>
+        <tr><td><code>stream_client_settings.json</code></td><td>— (build dir)</td><td>Client runtime config: serverIp, serverPort, logLevel. Saves last-used values.</td></tr>
+        <tr><td><code>stream_server.log</code></td><td>— (build dir)</td><td>Server plain-text log file (no ANSI codes)</td></tr>
+        <tr><td><code>stream_client.log</code></td><td>— (build dir)</td><td>Client plain-text log file</td></tr>
+        <tr><td><code>doc/phase_1_decision.html</code></td><td>—</td><td>Decision log: all architectural choices with reasoning</td></tr>
+        <tr><td><code>doc/phase_1/architecture.html</code></td><td>—</td><td>This file — visual architecture reference</td></tr>
+        <tr><td><code>doc/phase_1/stream_server.md</code></td><td>—</td><td>Server LLM reference — structs, functions, invariants</td></tr>
+        <tr><td><code>doc/phase_1/stream_client.md</code></td><td>—</td><td>Client LLM reference — structs, functions, invariants</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+</body>
+</html>
