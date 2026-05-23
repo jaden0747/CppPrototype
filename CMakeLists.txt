@@ -104,6 +104,9 @@ target_link_libraries(cli_server PRIVATE
     asio::asio
     Threads::Threads
 )
+if(WIN32)
+    target_link_libraries(cli_server PRIVATE ws2_32 mswsock)
+endif()
 
 # ---------------------------------------------------------------------------
 # Stream server — Phase 1: glReadPixels capture + TCP sender
