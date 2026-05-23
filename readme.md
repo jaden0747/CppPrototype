@@ -17,6 +17,19 @@ cmake --preset conan-default
 cmake --build build/Debug
 ```
 
+For Windows
+```bash
+Build commands going forward:
+# Configure (first time or after CMakeLists changes)
+cmake --preset conan-debug
+
+# Build
+cmake --build --preset conan-debug
+
+# Test
+ctest --preset conan-debug
+```
+
 ## Targets
 
 | Target | Description |
