@@ -38,6 +38,36 @@ if(APPLE)
 endif()
 
 # ---------------------------------------------------------------------------
+# Stream library — frame model, protocol, TCP endpoints, and GL adapters
+# ---------------------------------------------------------------------------
+add_library(stream_core
+    src/stream/frame_protocol.cpp
+    src/stream/frame_io.cpp
+    src/stream/tcp_socket.cpp
+    src/stream/stream_stats.cpp
+    src/stream/gl_app.cpp
+    src/stream/gl_frame_capture.cpp
+    src/stream/gl_frame_texture.cpp
+    src/stream/stream_server.cpp
+    src/stream/stream_client.cpp
+)
+target_include_directories(stream_core PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+target_compile_definitions(stream_core PUBLIC ASIO_STANDALONE)
+target_link_libraries(stream_core PUBLIC
+    asio::asio
+    imgui
+    glfw
+    OpenGL::GL
+    spdlog::spdlog_header_only
+    Threads::Threads
+)
+if(APPLE)
+    target_compile_definitions(stream_core PUBLIC GL_SILENCE_DEPRECATION)
+endif()
+
+# ---------------------------------------------------------------------------
 # Main application — ImGui window + settings + sender/receiver demo
 # ---------------------------------------------------------------------------
 add_executable(app
@@ -83,6 +113,7 @@ target_include_directories(stream_server PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 target_link_libraries(stream_server PRIVATE
+    stream_core
     imgui
     glfw
     OpenGL::GL
@@ -102,6 +133,7 @@ target_include_directories(stream_client PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 target_link_libraries(stream_client PRIVATE
+    stream_core
     imgui
     glfw
     OpenGL::GL
@@ -122,11 +154,13 @@ add_executable(tests
     test/test_data_container.cpp
     test/test_settings.cpp
     test/test_log.cpp
+    test/test_stream_protocol.cpp
 )
 target_include_directories(tests PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 target_link_libraries(tests PRIVATE
+    stream_core
     GTest::gtest
     GTest::gtest_main
     nlohmann_json::nlohmann_json

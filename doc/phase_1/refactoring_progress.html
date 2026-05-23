@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Phase 1 Refactoring Progress</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #f7f8fa;
+      --fg: #1f2328;
+      --muted: #68707a;
+      --panel: #ffffff;
+      --border: #d8dee4;
+      --done: #1a7f37;
+      --work: #9a6700;
+      --todo: #6e7781;
+      --code: #f0f3f6;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0d1117;
+        --fg: #e6edf3;
+        --muted: #8b949e;
+        --panel: #161b22;
+        --border: #30363d;
+        --code: #1f242c;
+      }
+    }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--fg);
+      font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    main {
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 32px 20px 48px;
+    }
+    h1, h2, h3 {
+      line-height: 1.2;
+      margin: 0;
+    }
+    h1 {
+      font-size: 30px;
+      margin-bottom: 8px;
+    }
+    h2 {
+      font-size: 20px;
+      margin: 28px 0 12px;
+    }
+    h3 {
+      font-size: 16px;
+      margin: 18px 0 8px;
+    }
+    p {
+      margin: 8px 0;
+    }
+    .muted {
+      color: var(--muted);
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+    }
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px 16px;
+    }
+    .phase {
+      display: grid;
+      grid-template-columns: 84px 1fr;
+      gap: 10px;
+      align-items: start;
+      padding: 12px 0;
+      border-top: 1px solid var(--border);
+    }
+    .phase:first-child {
+      border-top: 0;
+    }
+    .badge {
+      display: inline-block;
+      border-radius: 999px;
+      padding: 3px 9px;
+      font-size: 12px;
+      font-weight: 700;
+      text-align: center;
+      white-space: nowrap;
+    }
+    .done {
+      color: var(--done);
+      background: color-mix(in srgb, var(--done) 14%, transparent);
+    }
+    .work {
+      color: var(--work);
+      background: color-mix(in srgb, var(--work) 14%, transparent);
+    }
+    .todo {
+      color: var(--todo);
+      background: color-mix(in srgb, var(--todo) 14%, transparent);
+    }
+    code {
+      background: var(--code);
+      border-radius: 5px;
+      padding: 1px 5px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.93em;
+    }
+    ul {
+      margin: 8px 0 0;
+      padding-left: 20px;
+    }
+    li {
+      margin: 4px 0;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    th, td {
+      border-bottom: 1px solid var(--border);
+      padding: 9px 10px;
+      text-align: left;
+      vertical-align: top;
+    }
+    th {
+      font-size: 13px;
+      color: var(--muted);
+    }
+    tr:last-child td {
+      border-bottom: 0;
+    }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Phase 1 Refactoring Progress</h1>
+  <p class="muted">Updated while implementing the refactoring plan in <code>doc/phase_1/refactoring_plan.md</code>.</p>
+
+  <section class="grid" aria-label="Summary">
+    <div class="card">
+      <h3>Current State</h3>
+      <p>Phases A-E are implemented. The app files now delegate GLFW and ImGui lifecycle to <code>GlApp</code>.</p>
+    </div>
+    <div class="card">
+      <h3>Verification</h3>
+      <p>Final verification completed: <code>stream_server</code>, <code>stream_client</code>, and <code>tests</code> built successfully; <code>ctest</code> passed.</p>
+    </div>
+    <div class="card">
+      <h3>Compatibility Note</h3>
+      <p>The C++ server/client now use a 16-byte frame header with format and compression fields. Existing external scripts using the old 12-byte header need updates.</p>
+    </div>
+  </section>
+
+  <h2>Phase Status</h2>
+  <section class="card">
+    <div class="phase">
+      <span class="badge done">Done</span>
+      <div>
+        <strong>Phase A: Media and Protocol</strong>
+        <p>Added <code>Frame</code>, <code>PixelFormat</code>, <code>Compression</code>, <code>FrameHeader</code>, header encode/decode, frame validation, and protocol tests.</p>
+      </div>
+    </div>
+    <div class="phase">
+      <span class="badge done">Done</span>
+      <div>
+        <strong>Phase B: Socket Boundary</strong>
+        <p>Added <code>TcpConnection</code>, <code>TcpListener</code>, exact read/write operations, frame I/O helpers, and Asio-backed TCP implementation.</p>
+      </div>
+    </div>
+    <div class="phase">
+      <span class="badge done">Done</span>
+      <div>
+        <strong>Phase C: GL Adapters</strong>
+        <p>Added <code>GlFrameCapture</code> and <code>GlFrameTexture</code>. Capture order preserves render, readback, preview upload, frame delivery, and swap.</p>
+      </div>
+    </div>
+    <div class="phase">
+      <span class="badge done">Done</span>
+      <div>
+        <strong>Phase D: Threaded Endpoints</strong>
+        <p>Added <code>StreamServerEndpoint</code> and <code>StreamClientEndpoint</code>. The app files no longer own socket handles, frame header bytes, or network threads.</p>
+      </div>
+    </div>
+    <div class="phase">
+      <span class="badge done">Done</span>
+      <div>
+        <strong>Phase E: App Shell</strong>
+        <p>Added <code>GlApp</code> and refactored the server/client apps to use lifecycle callbacks. The server still captures after ImGui render and before buffer swap.</p>
+      </div>
+    </div>
+  </section>
+
+  <h2>Decision Log</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Decision</th>
+        <th>Reason</th>
+        <th>Tradeoff</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Use Asio behind <code>TcpConnection</code> and <code>TcpListener</code>.</td>
+        <td>The project already depends on Asio, and it removes duplicated platform socket code from the app files.</td>
+        <td>The implementation now depends on Asio semantics, but the app-facing API remains small enough to replace later.</td>
+      </tr>
+      <tr>
+        <td>Use a 16-byte frame header.</td>
+        <td>Adding format and compression fields now avoids another protocol break when H264 or other formats are added.</td>
+        <td>External old-protocol clients need updates. The C++ server and client remain compatible with each other.</td>
+      </tr>
+      <tr>
+        <td>Represent H264 as a stub enum value only.</td>
+        <td>The abstraction needs a future compression slot, but Phase 1 should not pretend to implement encoding or decoding.</td>
+        <td>Compressed payload validation is intentionally minimal until a real codec layer exists.</td>
+      </tr>
+      <tr>
+        <td>Keep stats on data ports.</td>
+        <td>The UI needs consistent snapshots with strings, so data ports fit better than atomic structs.</td>
+        <td>Stats delivery can drop snapshots under pool pressure, which is acceptable for UI telemetry.</td>
+      </tr>
+      <tr>
+        <td>Delay app shell extraction until after endpoint and GL adapters.</td>
+        <td>The render/capture ordering is the highest-risk part, so the lower-level boundaries were stabilized first.</td>
+        <td>Temporary duplication remained in the app files until Phase E.</td>
+      </tr>
+      <tr>
+        <td>Make <code>GlApp</code> callback-based instead of subclass-based.</td>
+        <td>The apps are small and already organize behavior around per-frame steps: poll data, draw panels, and optionally capture after render.</td>
+        <td>Callbacks are less extensible than a full application framework, but avoid introducing inheritance and keep ownership obvious in <code>main()</code>.</td>
+      </tr>
+      <tr>
+        <td>Put DockSpace setup inside <code>GlApp</code>.</td>
+        <td>Both stream apps need the same fullscreen dockspace every frame, and it is part of the ImGui frame shell rather than app-specific stream logic.</td>
+        <td>Apps that need a different root layout must disable docking in <code>GlAppConfig</code> or extend the shell later.</td>
+      </tr>
+      <tr>
+        <td>Keep GL texture adapters owned by the app, not by <code>GlApp</code>.</td>
+        <td>The capture and display textures are stream-domain resources, while <code>GlApp</code> should only own window and ImGui lifecycle.</td>
+        <td>The app must destroy these resources before <code>GlApp</code> destructs so OpenGL cleanup happens while the context is current.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>Verification</h2>
+  <ul>
+    <li>Passed: <code>cmake --build build/Debug --target tests stream_server stream_client -j 8</code>.</li>
+    <li>Passed: <code>ctest --test-dir build/Debug --output-on-failure</code>.</li>
+    <li>Recommended: manual UI smoke test, because the local automated tests do not open the GLFW windows.</li>
+  </ul>
+</main>
+</body>
+</html>
