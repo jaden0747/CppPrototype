@@ -2,6 +2,7 @@
 gtest/1.16.0
 glm/1.0.1
 glfw/3.4
+glad/0.1.36
 nlohmann_json/3.11.3
 cli/2.1.0
 asio/1.28.2
@@ -16,3 +17,5 @@ cmake_layout
 
 [options]
 spdlog/*:header_only=True
+glad/*:gl_profile=core
+glad/*:gl_version=3.3

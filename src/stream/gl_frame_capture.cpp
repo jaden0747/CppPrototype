@@ -1,5 +1,6 @@
 #include "stream/gl_frame_capture.hpp"
 
+#include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
 #include <algorithm>

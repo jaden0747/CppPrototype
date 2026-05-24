@@ -15,6 +15,7 @@ find_package(asio CONFIG REQUIRED)
 find_package(GTest REQUIRED)
 find_package(Threads REQUIRED)
 find_package(spdlog REQUIRED)
+find_package(glad CONFIG REQUIRED)
 
 # ---------------------------------------------------------------------------
 # Dear ImGui (from submodule in external/imgui)
@@ -31,7 +32,17 @@ add_library(imgui
     ${IMGUI_DIR}/backends/imgui_impl_opengl3.cpp
 )
 target_include_directories(imgui PUBLIC ${IMGUI_DIR} ${IMGUI_DIR}/backends)
-target_link_libraries(imgui PUBLIC glfw OpenGL::GL)
+# Tell imgui's OpenGL3 backend not to use its bundled imgl3w loader — we provide glad instead.
+target_compile_definitions(imgui PRIVATE IMGUI_IMPL_OPENGL_LOADER_CUSTOM)
+# Force-include glad/glad.h into imgui_impl_opengl3.cpp so its GL calls resolve through glad.
+if(MSVC)
+    set_source_files_properties(${IMGUI_DIR}/backends/imgui_impl_opengl3.cpp
+        PROPERTIES COMPILE_OPTIONS "/FI glad/glad.h")
+else()
+    set_source_files_properties(${IMGUI_DIR}/backends/imgui_impl_opengl3.cpp
+        PROPERTIES COMPILE_OPTIONS "-include;glad/glad.h")
+endif()
+target_link_libraries(imgui PUBLIC glfw OpenGL::GL glad::glad)
 # Suppress macOS OpenGL deprecation warnings (Apple deprecated GL in 10.14 but it still works)
 if(APPLE)
     target_compile_definitions(imgui PUBLIC GL_SILENCE_DEPRECATION)
@@ -60,9 +71,13 @@ target_link_libraries(stream_core PUBLIC
     imgui
     glfw
     OpenGL::GL
+    glad::glad
     spdlog::spdlog_header_only
     Threads::Threads
 )
+if(WIN32)
+    target_link_libraries(stream_core PUBLIC ws2_32 mswsock)
+endif()
 if(APPLE)
     target_compile_definitions(stream_core PUBLIC GL_SILENCE_DEPRECATION)
 endif()
@@ -80,6 +95,7 @@ target_link_libraries(app PRIVATE
     imgui
     glfw
     OpenGL::GL
+    glad::glad
     nlohmann_json::nlohmann_json
     spdlog::spdlog_header_only
     Threads::Threads

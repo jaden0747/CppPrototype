@@ -1,5 +1,6 @@
 #include "stream/gl_app.hpp"
 
+#include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <imgui.h>
 #include <imgui_impl_glfw.h>
@@ -36,6 +37,13 @@ GlApp::GlApp(GlAppConfig config)
     }
 
     glfwMakeContextCurrent(window_);
+    if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
+    {
+        glfwDestroyWindow(window_);
+        window_ = nullptr;
+        glfwTerminate();
+        return;
+    }
     glfwSwapInterval(config_.vsync ? 1 : 0);
 
     IMGUI_CHECKVERSION();
