@@ -27,9 +27,10 @@
 
 struct ServerSettings
 {
-    int         port     = 9999;
-    std::string logLevel = "info";
-    NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(ServerSettings, port, logLevel)
+    int         port      = 9999;
+    float       targetFps = 30.0f;
+    std::string logLevel  = "info";
+    NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(ServerSettings, port, targetFps, logLevel)
 };
 
 static SettingsItem<ServerSettings> g_settings("StreamServerSettings");
@@ -43,6 +44,15 @@ static dc::SenderPort<stream::ServerStats> g_statsSender;
 
 namespace
 {
+
+float sanitize_target_fps(float fps)
+{
+    if (fps < 1.0f)
+        return 1.0f;
+    if (fps > 240.0f)
+        return 240.0f;
+    return fps;
+}
 
 void draw_texture(uint32_t texture, int width, int height)
 {
@@ -70,8 +80,13 @@ int main()
     auto imguiSink = std::make_shared<ImGuiLogSink_mt>();
     imguiSink->set_pattern("%^[%H:%M:%S.%e] [%n] [%l] %v%$");
     Log::addSink(imguiSink);
-    auto log = Log::get("server");
-    log->info("Stream server starting (port={}, logLevel={})", g_settings->port, g_settings->logLevel);
+    auto log              = Log::get("server");
+    g_settings->targetFps = sanitize_target_fps(g_settings->targetFps);
+    log->info(
+        "Stream server starting (port={}, targetFps={}, logLevel={})",
+        g_settings->port,
+        g_settings->targetFps,
+        g_settings->logLevel);
 
     stream::GlApp app(
         stream::GlAppConfig{
@@ -99,9 +114,10 @@ int main()
     auto capture = std::make_unique<stream::GlFrameCapture>(g_frameSender);
     capture->set_after_deliver([&endpoint] { endpoint.notify_frame_available(); });
 
-    using clock         = std::chrono::steady_clock;
-    auto  lastFrameTime = clock::now();
-    float renderFps     = 0.0f;
+    using clock           = std::chrono::steady_clock;
+    auto  lastFrameTime   = clock::now();
+    auto  lastCaptureTime = clock::now();
+    float renderFps       = 0.0f;
 
     stream::ServerStats stats;
 
@@ -127,6 +143,7 @@ int main()
             {
                 ImGui::Begin("Server Control");
                 ImGui::Text("Render FPS : %.1f", renderFps);
+                ImGui::Text("Stream FPS : %.1f target", g_settings->targetFps);
                 ImGui::Text("Port       : %d", g_settings->port);
                 ImGui::Text("Log level  : %s", g_settings->logLevel.c_str());
                 ImGui::Separator();
@@ -157,6 +174,13 @@ int main()
             },
             [&](int fbW, int fbH)
             {
+                const float targetFps = sanitize_target_fps(g_settings->targetFps);
+                const auto  interval  = std::chrono::duration<float>(1.0f / targetFps);
+                const auto  now       = clock::now();
+                if (now - lastCaptureTime < interval)
+                    return;
+
+                lastCaptureTime = now;
                 if (!capture->capture(fbW, fbH))
                     log->warn("Frame pool exhausted; skipping capture this frame");
             },

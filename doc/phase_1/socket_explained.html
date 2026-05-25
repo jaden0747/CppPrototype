@@ -1,0 +1,795 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Socket, TCP, and This Codebase</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #f6f8fb;
+      --paper: #ffffff;
+      --ink: #17202a;
+      --muted: #667085;
+      --line: #d7dde8;
+      --blue: #2563eb;
+      --green: #16803c;
+      --amber: #a15c00;
+      --red: #b42318;
+      --violet: #6d28d9;
+      --code: #eef2f7;
+      --soft-blue: #eaf1ff;
+      --soft-green: #eaf8ef;
+      --soft-amber: #fff4df;
+      --soft-violet: #f3ecff;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0d1117;
+        --paper: #161b22;
+        --ink: #e6edf3;
+        --muted: #8b949e;
+        --line: #30363d;
+        --code: #202833;
+        --soft-blue: #102341;
+        --soft-green: #102d1c;
+        --soft-amber: #352409;
+        --soft-violet: #24163c;
+      }
+    }
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+      background:
+        radial-gradient(circle at top left, color-mix(in srgb, var(--blue) 16%, transparent), transparent 32rem),
+        radial-gradient(circle at top right, color-mix(in srgb, var(--violet) 14%, transparent), transparent 30rem),
+        var(--bg);
+      color: var(--ink);
+      font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    main {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 36px 20px 64px;
+    }
+    h1, h2, h3 {
+      line-height: 1.2;
+      margin: 0;
+    }
+    h1 {
+      font-size: clamp(32px, 5vw, 54px);
+      letter-spacing: 0;
+    }
+    h2 {
+      margin-top: 34px;
+      font-size: 25px;
+    }
+    h3 {
+      margin-top: 18px;
+      font-size: 18px;
+    }
+    p {
+      margin: 8px 0;
+    }
+    a {
+      color: var(--blue);
+    }
+    code {
+      background: var(--code);
+      border-radius: 5px;
+      padding: 1px 5px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.93em;
+    }
+    pre {
+      overflow-x: auto;
+      background: #0f172a;
+      color: #e2e8f0;
+      border-radius: 10px;
+      padding: 14px 16px;
+      font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+    .hero {
+      background: color-mix(in srgb, var(--paper) 88%, transparent);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 28px;
+      box-shadow: 0 18px 50px color-mix(in srgb, #000 12%, transparent);
+    }
+    .subtitle {
+      max-width: 820px;
+      color: var(--muted);
+      font-size: 18px;
+      margin-top: 12px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 14px;
+      margin-top: 16px;
+    }
+    .card {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 16px;
+    }
+    .note {
+      border-left: 4px solid var(--blue);
+      background: var(--soft-blue);
+      border-radius: 8px;
+      padding: 12px 14px;
+      margin: 14px 0;
+    }
+    .brain {
+      border-left-color: var(--violet);
+      background: var(--soft-violet);
+    }
+    .warning {
+      border-left-color: var(--amber);
+      background: var(--soft-amber);
+    }
+    .success {
+      border-left-color: var(--green);
+      background: var(--soft-green);
+    }
+    .badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--paper);
+      background: var(--blue);
+      margin-right: 6px;
+    }
+    .flow {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(120px, 1fr));
+      gap: 10px;
+      margin: 16px 0;
+    }
+    .step {
+      min-height: 96px;
+      border: 1px solid var(--line);
+      background: var(--paper);
+      border-radius: 10px;
+      padding: 12px;
+      position: relative;
+    }
+    .step::after {
+      content: ">";
+      position: absolute;
+      right: -12px;
+      top: 36px;
+      color: var(--muted);
+      font-weight: 700;
+    }
+    .step:last-child::after {
+      content: "";
+    }
+    .step strong {
+      display: block;
+      color: var(--blue);
+      margin-bottom: 4px;
+    }
+    .two {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 16px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      overflow: hidden;
+      margin-top: 12px;
+    }
+    th, td {
+      border-bottom: 1px solid var(--line);
+      padding: 10px;
+      text-align: left;
+      vertical-align: top;
+    }
+    th {
+      color: var(--muted);
+      font-size: 13px;
+    }
+    tr:last-child td {
+      border-bottom: 0;
+    }
+    .mini-quiz {
+      counter-reset: quiz;
+    }
+    .quiz-item {
+      counter-increment: quiz;
+      margin: 10px 0;
+      padding: 12px 14px;
+      border: 1px dashed color-mix(in srgb, var(--violet) 50%, var(--line));
+      border-radius: 10px;
+      background: color-mix(in srgb, var(--soft-violet) 60%, transparent);
+    }
+    .quiz-item::before {
+      content: "Checkpoint " counter(quiz) ": ";
+      color: var(--violet);
+      font-weight: 800;
+    }
+    details {
+      margin-top: 8px;
+      border-top: 1px solid color-mix(in srgb, var(--violet) 30%, transparent);
+      padding-top: 8px;
+    }
+    summary {
+      cursor: pointer;
+      color: var(--violet);
+      font-weight: 700;
+    }
+    .path {
+      display: inline-block;
+      color: var(--green);
+      font-weight: 700;
+    }
+    @media (max-width: 760px) {
+      .flow, .two {
+        grid-template-columns: 1fr;
+      }
+      .step::after {
+        content: "v";
+        right: 50%;
+        top: auto;
+        bottom: -19px;
+      }
+      .step {
+        margin-bottom: 10px;
+      }
+    }
+  </style>
+</head>
+<body>
+<main>
+  <section class="hero">
+    <span class="badge">Teaching Note</span>
+    <span class="badge" style="background: var(--green)">This Codebase</span>
+    <h1>How Sockets and TCP Work</h1>
+    <p class="subtitle">
+      This document explains the mental model first, then walks through how the streaming prototype uses
+      <code>TcpListener</code>, <code>TcpConnection</code>, frame headers, and endpoint threads.
+    </p>
+  </section>
+
+  <h2>1. The Mental Model</h2>
+  <div class="grid">
+    <div class="card">
+      <h3>Socket</h3>
+      <p>A socket is one endpoint of a network conversation. In code, it behaves like a handle you can read from and write to.</p>
+    </div>
+    <div class="card">
+      <h3>IP Address</h3>
+      <p>The machine location. Example: <code>127.0.0.1</code> means "this same computer".</p>
+    </div>
+    <div class="card">
+      <h3>Port</h3>
+      <p>The application doorway on that machine. Example: port <code>9999</code> is where the stream server waits.</p>
+    </div>
+    <div class="card">
+      <h3>TCP</h3>
+      <p>A reliable byte stream. It preserves byte order, retransmits lost data, and tells you when the connection breaks.</p>
+    </div>
+  </div>
+
+  <div class="note brain">
+    <strong>Brain interaction:</strong>
+    imagine two programs sharing a very long pipe. One side pushes bytes in. The other side receives those same bytes in the same order.
+    TCP does not know what a frame, image, header, or JSON message is. It only knows bytes.
+  </div>
+
+  <h2>2. Server and Client Roles</h2>
+  <div class="flow">
+    <div class="step">
+      <strong>Server opens</strong>
+      <p>Create a listening socket.</p>
+    </div>
+    <div class="step">
+      <strong>Server binds</strong>
+      <p>Attach it to a port.</p>
+    </div>
+    <div class="step">
+      <strong>Server listens</strong>
+      <p>Wait for clients.</p>
+    </div>
+    <div class="step">
+      <strong>Client connects</strong>
+      <p>Dial host and port.</p>
+    </div>
+    <div class="step">
+      <strong>Both exchange</strong>
+      <p>Read and write bytes.</p>
+    </div>
+  </div>
+
+  <div class="two">
+    <div class="card">
+      <h3>Server Socket</h3>
+      <p>The server has a <em>listener</em>. Its job is not to send frames directly. Its job is to accept a client and create a connected socket.</p>
+      <pre>listener socket
+  accepts client
+    creates connected socket</pre>
+    </div>
+    <div class="card">
+      <h3>Connected Socket</h3>
+      <p>After accept/connect succeeds, both programs hold a connected socket. That is the thing used for <code>read</code> and <code>write</code>.</p>
+      <pre>server TcpConnection <---- TCP byte stream ----> client TcpConnection</pre>
+    </div>
+  </div>
+
+  <div class="mini-quiz">
+    <div class="quiz-item">
+      If TCP is reliable, why do we still need a frame header?
+      <details>
+        <summary>Answer</summary>
+        TCP preserves bytes, but it does not preserve message boundaries. If the sender writes "header" then "pixels",
+        the receiver just sees bytes. The app protocol must say how many bytes belong to one frame.
+      </details>
+    </div>
+  </div>
+
+  <h2>3. TCP Is a Stream, Not a Message Queue</h2>
+  <p>
+    This is the single most important socket lesson. TCP gives you a continuous byte stream. A single write on one side
+    may be received as several reads, or several writes may be combined into one read.
+  </p>
+  <div class="card">
+    <h3>Sender's intention</h3>
+    <pre>write 16-byte header
+write 2,764,800-byte RGB payload</pre>
+    <h3>Receiver may observe</h3>
+    <pre>read gets 7 bytes
+read gets 9 bytes
+read gets 1448 bytes
+read gets 1448 bytes
+...
+read eventually gets all payload bytes</pre>
+  </div>
+
+  <div class="note warning">
+    <strong>Teacher warning:</strong>
+    never assume one <code>read</code> equals one frame. That mistake works in small tests and fails under real network timing.
+    This codebase correctly uses exact-size reads and writes.
+  </div>
+
+  <h2>4. What <code>read_exact</code> and <code>write_exact</code> Do</h2>
+  <p>
+    The wrapper in <span class="path">src/stream/tcp_socket.cpp</span> uses Asio composed operations:
+    <code>asio::read(... transfer_exactly(size))</code> and <code>asio::write(... transfer_exactly(size))</code>.
+  </p>
+  <table>
+    <thead>
+      <tr>
+        <th>Function</th>
+        <th>Meaning</th>
+        <th>Why it matters</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>read_exact(dst, size)</code></td>
+        <td>Keep reading until exactly <code>size</code> bytes are placed into <code>dst</code>, or an error occurs.</td>
+        <td>Lets frame code safely read a complete 16-byte header or complete image payload.</td>
+      </tr>
+      <tr>
+        <td><code>write_exact(src, size)</code></td>
+        <td>Keep writing until exactly <code>size</code> bytes from <code>src</code> are sent, or an error occurs.</td>
+        <td>Prevents partial frame headers or partial image payload writes from being treated as success.</td>
+      </tr>
+      <tr>
+        <td><code>close()</code></td>
+        <td>Shutdown both directions, then close the socket.</td>
+        <td>Unblocks waiting operations and releases OS resources.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <pre>bool TcpConnection::read_exact(void* dst, size_t size)
+{
+    asio::error_code ec;
+    asio::read(socket, asio::buffer(dst, size), asio::transfer_exactly(size), ec);
+    return !ec;
+}</pre>
+
+  <div class="mini-quiz">
+    <div class="quiz-item">
+      If the receiver needs 16 bytes for a header but the kernel has only 5 bytes ready, what should happen?
+      <details>
+        <summary>Answer</summary>
+        <code>read_exact</code> waits internally until the remaining 11 bytes arrive, or returns false if the connection fails.
+      </details>
+    </div>
+  </div>
+
+  <h2>5. The TCP Lifecycle in This Codebase</h2>
+  <div class="flow">
+    <div class="step">
+      <strong>Listen</strong>
+      <p><code>TcpListener(port)</code></p>
+    </div>
+    <div class="step">
+      <strong>Accept</strong>
+      <p><code>accept_for(timeout)</code></p>
+    </div>
+    <div class="step">
+      <strong>Connect</strong>
+      <p><code>connect_tcp(host, port)</code></p>
+    </div>
+    <div class="step">
+      <strong>Transfer</strong>
+      <p><code>write_frame</code> and <code>read_frame</code></p>
+    </div>
+    <div class="step">
+      <strong>Close</strong>
+      <p><code>close()</code></p>
+    </div>
+  </div>
+
+  <h3><code>TcpListener</code>: the server doorway</h3>
+  <p>
+    <span class="path">TcpListener</span> wraps Asio's <code>tcp::acceptor</code>. The constructor opens an IPv4 acceptor,
+    binds it to a port, starts listening, and puts it in non-blocking mode.
+  </p>
+  <pre>tcp::endpoint endpoint(tcp::v4(), port);
+acceptor.open(endpoint.protocol(), ec);
+acceptor.set_option(tcp::acceptor::reuse_address(true), ec);
+acceptor.bind(endpoint, ec);
+acceptor.listen(asio::socket_base::max_listen_connections, ec);
+acceptor.non_blocking(true, ec);</pre>
+
+  <div class="note">
+    <strong>Why non-blocking accept?</strong>
+    The server thread must periodically check whether the app is shutting down. A permanently blocking <code>accept</code>
+    could make shutdown awkward. This code polls until a deadline, sleeps 10 ms between "not ready" attempts, and returns
+    <code>std::nullopt</code> if no client appears in time.
+  </div>
+
+  <h3><code>connect_tcp</code>: the client dialing function</h3>
+  <p>
+    The client resolves a host string and port into one or more network endpoints, then asks Asio to connect to one.
+  </p>
+  <pre>tcp::resolver resolver(conn->io);
+auto endpoints = resolver.resolve(host, std::to_string(port), ec);
+asio::connect(conn->socket, endpoints, ec);</pre>
+
+  <p>
+    For <code>127.0.0.1:9999</code>, this usually resolves directly to the local machine's loopback address and the stream
+    server port.
+  </p>
+
+  <h2>6. Application Protocol: Turning Bytes Into Frames</h2>
+  <p>
+    TCP gives the project a byte pipe. The stream protocol gives those bytes meaning. This project sends each frame as:
+  </p>
+  <pre>[4B width][4B height][1B pixel format][1B compression][2B reserved][4B payload size][payload bytes]</pre>
+  <p>
+    The fixed header is <code>16</code> bytes. The payload is currently raw RGB pixels. H264 exists only as a placeholder enum
+    for future work.
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Layer</th>
+        <th>File</th>
+        <th>Responsibility</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Frame model</td>
+        <td><code>include/stream/frame.hpp</code></td>
+        <td>Defines <code>Frame</code>, <code>PixelFormat</code>, <code>Compression</code>, and payload validation.</td>
+      </tr>
+      <tr>
+        <td>Header codec</td>
+        <td><code>src/stream/frame_protocol.cpp</code></td>
+        <td>Encodes and decodes the 16-byte wire header.</td>
+      </tr>
+      <tr>
+        <td>Frame I/O</td>
+        <td><code>src/stream/frame_io.cpp</code></td>
+        <td>Writes header + payload, reads header, reads payload, or drains payload.</td>
+      </tr>
+      <tr>
+        <td>TCP wrapper</td>
+        <td><code>src/stream/tcp_socket.cpp</code></td>
+        <td>Owns exact byte reads/writes, connection creation, listener accept, and close behavior.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Sending one frame</h3>
+  <pre>write_frame(conn, frame)
+  validate frame
+  header = header_from_frame(frame)
+  bytes = encode_header(header)
+  conn.write_exact(header bytes)
+  conn.write_exact(frame.pixels)</pre>
+
+  <h3>Receiving one frame</h3>
+  <pre>read_frame_header(conn)
+  conn.read_exact(16 bytes)
+  decode and validate header
+
+read_frame_payload(conn, header, frame)
+  resize frame.pixels to payload_size
+  conn.read_exact(payload_size bytes)</pre>
+
+  <div class="note brain">
+    <strong>Brain interaction:</strong>
+    cover the payload with your hand and look only at the header. Can you know how many bytes to read next?
+    Yes: <code>payload_size</code>. That is why the receiver can remain synchronized.
+  </div>
+
+  <h2>7. Server Endpoint Walkthrough</h2>
+  <p>
+    The server endpoint lives in <span class="path">src/stream/stream_server.cpp</span>. It is the bridge between data ports
+    and TCP.
+  </p>
+  <div class="flow">
+    <div class="step">
+      <strong>Start thread</strong>
+      <p><code>endpoint.start()</code></p>
+    </div>
+    <div class="step">
+      <strong>Listen</strong>
+      <p><code>TcpListener</code></p>
+    </div>
+    <div class="step">
+      <strong>Accept client</strong>
+      <p><code>accept_for</code></p>
+    </div>
+    <div class="step">
+      <strong>Wait for frame</strong>
+      <p>condition variable</p>
+    </div>
+    <div class="step">
+      <strong>Write frame</strong>
+      <p><code>write_frame</code></p>
+    </div>
+  </div>
+
+  <p>
+    The render thread captures frames with <code>GlFrameCapture</code>. After it delivers a frame into the data port, it calls
+    <code>notify_frame_available()</code>. The server network thread wakes up, promotes the latest frame from the receiver port,
+    validates it, and writes it to the connected client.
+  </p>
+
+  <pre>render thread:
+  capture framebuffer
+  deliver Frame into SenderPort
+  endpoint.notify_frame_available()
+
+network thread:
+  wait for notification
+  frames_.update()
+  frame = frames_.getData()
+  write_frame(client, frame)</pre>
+
+  <div class="note success">
+    <strong>Good design choice:</strong>
+    TCP code does not know about OpenGL. OpenGL code does not know about socket handles. The endpoint is the adapter between them.
+  </div>
+
+  <h2>8. Client Endpoint Walkthrough</h2>
+  <p>
+    The client endpoint lives in <span class="path">src/stream/stream_client.cpp</span>. It waits for a UI connect request,
+    opens a TCP connection, reads frames, and delivers them into a data port for the render thread.
+  </p>
+  <div class="flow">
+    <div class="step">
+      <strong>Connect request</strong>
+      <p>UI calls <code>connect</code></p>
+    </div>
+    <div class="step">
+      <strong>Dial server</strong>
+      <p><code>connect_tcp</code></p>
+    </div>
+    <div class="step">
+      <strong>Read header</strong>
+      <p>16 exact bytes</p>
+    </div>
+    <div class="step">
+      <strong>Reserve frame</strong>
+      <p>mempool slot</p>
+    </div>
+    <div class="step">
+      <strong>Read payload</strong>
+      <p>direct into slot</p>
+    </div>
+  </div>
+
+  <pre>Frame* slot = frames_.reserve();
+if (slot) {
+    read_frame_payload(conn, header, *slot);
+    frames_.deliver();
+} else {
+    drain_frame_payload(conn, header);
+}</pre>
+
+  <h3>Why drain when the frame pool is exhausted?</h3>
+  <p>
+    Suppose the client reads a valid header saying "the next payload is 2,764,800 bytes", but it has no free frame slot.
+    It cannot simply skip reading. If it left those bytes in the TCP stream, the next header read would accidentally read
+    image pixels and the protocol would be corrupted.
+  </p>
+  <div class="note warning">
+    <strong>Rule:</strong>
+    after reading a header, the receiver must consume exactly that payload, either into a frame slot or into a temporary drain buffer.
+  </div>
+
+  <h2>9. Threading and Shutdown</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Object</th>
+        <th>Thread behavior</th>
+        <th>Shutdown mechanism</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>StreamServerEndpoint</code></td>
+        <td>Owns one network thread that listens, accepts, waits for frames, and writes them.</td>
+        <td><code>stop()</code> clears <code>running_</code>, closes active sockets, notifies the frame condition variable, then joins.</td>
+      </tr>
+      <tr>
+        <td><code>StreamClientEndpoint</code></td>
+        <td>Owns one network thread that waits for connect requests, connects, and reads frames.</td>
+        <td><code>stop()</code> clears flags, closes the current connection, wakes the request condition variable, then joins.</td>
+      </tr>
+      <tr>
+        <td><code>TcpConnection</code></td>
+        <td>Used by one endpoint thread at a time in this design.</td>
+        <td>Destructor calls <code>close()</code>, giving RAII cleanup.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="mini-quiz">
+    <div class="quiz-item">
+      Why does <code>stop()</code> close the socket instead of only setting a boolean flag?
+      <details>
+        <summary>Answer</summary>
+        A thread may be blocked inside a read, write, accept, or wait. Closing the socket forces network operations to return,
+        so the thread can observe the stop flag and exit.
+      </details>
+    </div>
+  </div>
+
+  <h2>10. Why <code>ignore_sigpipe()</code> Exists</h2>
+  <p>
+    On POSIX systems, writing to a closed socket can raise <code>SIGPIPE</code>, which may terminate the process by default.
+    The helper in <span class="path">tcp_socket.cpp</span> ignores that signal so socket write failures come back as normal
+    errors instead.
+  </p>
+  <pre>void ignore_sigpipe()
+{
+#ifndef _WIN32
+    ::signal(SIGPIPE, SIG_IGN);
+#endif
+}</pre>
+
+  <h2>11. Full Codebase Map</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Question</th>
+        <th>Where to look</th>
+        <th>What you will see</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>What is a frame?</td>
+        <td><code>include/stream/frame.hpp</code></td>
+        <td>Raw pixels, width, height, format, compression stub, and validation helpers.</td>
+      </tr>
+      <tr>
+        <td>How is a frame represented on the wire?</td>
+        <td><code>include/stream/frame_protocol.hpp</code>, <code>src/stream/frame_protocol.cpp</code></td>
+        <td>A 16-byte big-endian header plus payload bytes.</td>
+      </tr>
+      <tr>
+        <td>How are exact bytes read and written?</td>
+        <td><code>include/stream/tcp_socket.hpp</code>, <code>src/stream/tcp_socket.cpp</code></td>
+        <td><code>TcpConnection</code> and <code>TcpListener</code> wrappers over Asio.</td>
+      </tr>
+      <tr>
+        <td>How does the server send frames?</td>
+        <td><code>src/stream/stream_server.cpp</code></td>
+        <td>Accept a client, wait for frame notifications, read from a receiver port, call <code>write_frame</code>.</td>
+      </tr>
+      <tr>
+        <td>How does the client receive frames?</td>
+        <td><code>src/stream/stream_client.cpp</code></td>
+        <td>Connect to server, read headers, reserve frame slots, read payloads, deliver frames to the UI.</td>
+      </tr>
+      <tr>
+        <td>Where does OpenGL fit?</td>
+        <td><code>src/stream/gl_frame_capture.cpp</code>, <code>src/stream/gl_frame_texture.cpp</code></td>
+        <td>Capture framebuffer into frames on the server; upload received frames into a texture on the client.</td>
+      </tr>
+      <tr>
+        <td>What do app files still do?</td>
+        <td><code>app/stream_server.cpp</code>, <code>app/stream_client.cpp</code></td>
+        <td>Settings, logging, UI panels, data-port wiring, and endpoint creation.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>12. The End-to-End Story</h2>
+  <div class="card">
+    <pre>Server app
+  GlApp renders ImGui
+  GlFrameCapture reads framebuffer into Frame
+  SenderPort delivers Frame to server endpoint
+  StreamServerEndpoint writes frame header + pixels to TCP
+
+TCP
+  reliable ordered byte stream
+
+Client app
+  StreamClientEndpoint reads frame header + pixels from TCP
+  SenderPort delivers Frame to render thread
+  GlFrameTexture uploads pixels to OpenGL texture
+  ImGui displays texture</pre>
+  </div>
+
+  <div class="note brain">
+    <strong>Final mental checkpoint:</strong>
+    when debugging a stream bug, ask which layer owns the problem:
+    frame validity, protocol header, exact byte transfer, endpoint thread state, data-port handoff, or OpenGL texture upload.
+    That question cuts the search space sharply.
+  </div>
+
+  <h2>13. Common Bugs This Design Avoids</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Bug</th>
+        <th>Symptom</th>
+        <th>Design protection</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Assuming one read equals one frame</td>
+        <td>Corrupted frames or random disconnects</td>
+        <td><code>read_exact</code> and explicit payload sizes</td>
+      </tr>
+      <tr>
+        <td>Protocol desynchronization after dropping a frame</td>
+        <td>Next header parse fails</td>
+        <td><code>drain_frame_payload</code></td>
+      </tr>
+      <tr>
+        <td>Socket details leaking into UI</td>
+        <td>Hard-to-change app code</td>
+        <td><code>TcpConnection</code>, <code>StreamServerEndpoint</code>, <code>StreamClientEndpoint</code></td>
+      </tr>
+      <tr>
+        <td>GL code running on network thread</td>
+        <td>Context errors or crashes</td>
+        <td>GL adapters are used by the render thread; endpoints use data ports</td>
+      </tr>
+      <tr>
+        <td>Hung shutdown</td>
+        <td>App window closes but process stays alive</td>
+        <td>Endpoint <code>stop()</code> closes sockets and wakes condition variables</td>
+      </tr>
+    </tbody>
+  </table>
+</main>
+</body>
+</html>
