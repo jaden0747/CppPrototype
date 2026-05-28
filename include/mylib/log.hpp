@@ -17,11 +17,11 @@
 //   logger->warn("Something is off");
 // ---------------------------------------------------------------------------
 
-#include <spdlog/spdlog.h>
-#include <spdlog/sinks/stdout_color_sinks.h>
+#include <spdlog/logger.h>
 #include <spdlog/sinks/ansicolor_sink.h>
 #include <spdlog/sinks/basic_file_sink.h>
-#include <spdlog/logger.h>
+#include <spdlog/sinks/stdout_color_sinks.h>
+#include <spdlog/spdlog.h>
 
 #include <memory>
 #include <mutex>
@@ -36,7 +36,7 @@ public:
     // Safe to call multiple times (reinitializes).
     static void init(const std::string& level = "info", const std::string& logFile = "app.log")
     {
-        auto& inst = instance();
+        auto&                       inst = instance();
         std::lock_guard<std::mutex> lock(inst.m_mu);
 
         // Drop all previously registered loggers from spdlog's global registry
@@ -67,7 +67,7 @@ public:
     // Get or create a named logger
     static std::shared_ptr<spdlog::logger> get(const std::string& name)
     {
-        auto& inst = instance();
+        auto&                       inst = instance();
         std::lock_guard<std::mutex> lock(inst.m_mu);
 
         auto it = inst.m_loggers.find(name);
@@ -77,6 +77,7 @@ public:
         auto sinks  = inst.getSinks();
         auto logger = std::make_shared<spdlog::logger>(name, sinks.begin(), sinks.end());
         logger->set_level(inst.m_level);
+        logger->flush_on(spdlog::level::trace); // write-through so SIGTERM doesn't lose messages
         inst.m_loggers[name] = logger;
         // Register with spdlog (drop first in case of re-init race)
         spdlog::drop(name);
@@ -87,10 +88,11 @@ public:
     // Change the log level at runtime
     static void setLevel(const std::string& level)
     {
-        auto& inst = instance();
+        auto&                       inst = instance();
         std::lock_guard<std::mutex> lock(inst.m_mu);
         inst.m_level = spdlog::level::from_str(level);
-        if (inst.m_consoleSink) inst.m_consoleSink->set_level(inst.m_level);
+        if (inst.m_consoleSink)
+            inst.m_consoleSink->set_level(inst.m_level);
         for (auto& [name, logger] : inst.m_loggers)
             logger->set_level(inst.m_level);
     }
@@ -98,7 +100,7 @@ public:
     // Add an extra sink (e.g. ImGui sink) — call before or after init
     static void addSink(spdlog::sink_ptr sink)
     {
-        auto& inst = instance();
+        auto&                       inst = instance();
         std::lock_guard<std::mutex> lock(inst.m_mu);
         inst.m_extraSinks.push_back(sink);
         sink->set_level(inst.m_level);
@@ -110,19 +112,21 @@ public:
 private:
     struct Instance
     {
-        std::mutex                                                     m_mu;
-        bool                                                           m_initialized = false;
-        spdlog::level::level_enum                                      m_level       = spdlog::level::info;
-        std::shared_ptr<spdlog::sinks::ansicolor_stdout_sink_mt>        m_consoleSink;
-        std::shared_ptr<spdlog::sinks::basic_file_sink_mt>             m_fileSink;
-        std::vector<spdlog::sink_ptr>                                  m_extraSinks;
+        std::mutex                                                       m_mu;
+        bool                                                             m_initialized = false;
+        spdlog::level::level_enum                                        m_level       = spdlog::level::info;
+        std::shared_ptr<spdlog::sinks::ansicolor_stdout_sink_mt>         m_consoleSink;
+        std::shared_ptr<spdlog::sinks::basic_file_sink_mt>               m_fileSink;
+        std::vector<spdlog::sink_ptr>                                    m_extraSinks;
         std::unordered_map<std::string, std::shared_ptr<spdlog::logger>> m_loggers;
 
         std::vector<spdlog::sink_ptr> getSinks()
         {
             std::vector<spdlog::sink_ptr> sinks;
-            if (m_consoleSink) sinks.push_back(m_consoleSink);
-            if (m_fileSink)    sinks.push_back(m_fileSink);
+            if (m_consoleSink)
+                sinks.push_back(m_consoleSink);
+            if (m_fileSink)
+                sinks.push_back(m_fileSink);
             for (auto& s : m_extraSinks)
                 sinks.push_back(s);
             return sinks;

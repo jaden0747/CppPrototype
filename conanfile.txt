@@ -7,6 +7,7 @@ nlohmann_json/3.11.3
 cli/2.1.0
 asio/1.28.2
 spdlog/1.15.3
+ffmpeg/7.1.1
 
 [generators]
 CMakeDeps
@@ -19,3 +20,8 @@ cmake_layout
 spdlog/*:header_only=True
 glad/*:gl_profile=core
 glad/*:gl_version=3.3
+ffmpeg/*:with_libx264=True
+ffmpeg/*:with_programs=False
+ffmpeg/*:with_libvpx=False
+ffmpeg/*:with_opus=False
+ffmpeg/*:with_libmp3lame=False

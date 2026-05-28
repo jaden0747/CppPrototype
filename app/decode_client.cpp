@@ -1,20 +1,20 @@
 // ---------------------------------------------------------------------------
-// stream_client.cpp - raw RGB frame streaming client
+// decode_client.cpp — Phase 2: H.264-decoding stream client
 //
-// App responsibilities:
-//   - settings, logging, ImGui panels, and data-port wiring
-// Stream library responsibilities:
-//   - frame model/protocol, TCP endpoint, GL texture upload
+// Same structure as stream_client but the texture hook decodes incoming H.264
+// NAL bytes back to raw RGB before uploading to the GL texture.
 // ---------------------------------------------------------------------------
-#include "stream/stream_client.hpp"
 #include "mylib/data_container.hpp"
 #include "mylib/imgui_log_sink.hpp"
 #include "mylib/log.hpp"
 #include "settings/settings_item.hpp"
 #include "settings/settings_registry.hpp"
+#include "stream/ffmpeg_log.hpp"
 #include "stream/gl_app.hpp"
 #include "stream/gl_frame_texture.hpp"
+#include "stream/h264_decoder.hpp"
 #include "stream/imgui_log_layer.hpp"
+#include "stream/stream_client.hpp"
 #include "stream/tcp_socket.hpp"
 
 #include <imgui.h>
@@ -25,16 +25,16 @@
 #include <memory>
 #include <string>
 
-struct ClientSettings
+struct DecodeClientSettings
 {
     std::string         serverIp   = "127.0.0.1";
     int                 serverPort = 9999;
     std::string         logLevel   = "info";
-    stream::GlAppConfig window{"Stream Client", 1280, 720, true, true, {0.08f, 0.08f, 0.10f, 1.0f}};
-    NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(ClientSettings, serverIp, serverPort, logLevel, window)
+    stream::GlAppConfig window{"Decode Client (H.264)", 1280, 720, true, true, {0.08f, 0.08f, 0.10f, 1.0f}};
+    NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(DecodeClientSettings, serverIp, serverPort, logLevel, window)
 };
 
-static SettingsItem<ClientSettings> g_settings("StreamClientSettings");
+static SettingsItem<DecodeClientSettings> g_settings("DecodeClientSettings");
 
 static dc::Mempool<stream::Frame>    g_framePool(3);
 static dc::SenderPort<stream::Frame> g_frameSender;
@@ -65,10 +65,10 @@ void draw_stream_texture(const stream::GlFrameTexture& texture)
 
 // ---- Layer -----------------------------------------------------------------
 
-class StreamClientLayer : public stream::GlLayer
+class DecodeClientLayer : public stream::GlLayer
 {
 public:
-    StreamClientLayer(
+    DecodeClientLayer(
         stream::StreamClientEndpoint&          endpoint,
         stream::GlFrameTexture&                texture,
         dc::ReceiverPort<stream::Frame>&       frameReceiver,
@@ -105,6 +105,8 @@ public:
     void onImGui() override
     {
         ImGui::Begin("Connection");
+        ImGui::TextColored(ImVec4(0.4f, 0.8f, 1.0f, 1.0f), "Phase 2 — H.264 Decoding");
+        ImGui::Separator();
 
         bool isConnecting = m_connectRequested && !m_stats.connected;
         ImGui::InputText(
@@ -152,16 +154,16 @@ public:
         else
             ImGui::TextColored(ImVec4(1.0f, 0.55f, 0.1f, 1.0f), "Status: %s", m_stats.status.c_str());
 
-        ImGui::Text("FPS recv   : %.1f", m_stats.fps);
-        ImGui::Text("Frames     : %llu", static_cast<unsigned long long>(m_stats.frames_received));
-        ImGui::Text("Data recv  : %.2f MB", static_cast<double>(m_stats.bytes_received) / 1e6);
+        ImGui::Text("FPS recv     : %.1f", m_stats.fps);
+        ImGui::Text("Frames       : %llu", static_cast<unsigned long long>(m_stats.frames_received));
+        ImGui::Text("Data recv    : %.2f MB", static_cast<double>(m_stats.bytes_received) / 1e6);
         if (m_texture.ready())
-            ImGui::Text("Resolution : %d x %d", m_texture.width(), m_texture.height());
-        ImGui::Text("Log level  : %s", g_settings->logLevel.c_str());
+            ImGui::Text("Resolution   : %d x %d", m_texture.width(), m_texture.height());
+        ImGui::TextDisabled("Codec: H.264 (libavcodec)");
         ImGui::End();
 
         ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
-        ImGui::Begin("Video Stream");
+        ImGui::Begin("Video Stream (decoded)");
         ImGui::PopStyleVar();
 
         if (m_texture.ready())
@@ -170,12 +172,11 @@ public:
         {
             ImVec2 avail = ImGui::GetContentRegionAvail();
             ImGui::SetCursorPos(ImVec2(avail.x * 0.5f - 100.0f, avail.y * 0.5f));
-            ImGui::TextDisabled("No stream - connect to a server");
+            ImGui::TextDisabled("No stream - connect to an encode_server");
         }
         ImGui::End();
     }
 
-    // Expose final IP/port so main() can persist them on shutdown.
     const char* ip() const
     {
         return m_ipBuf;
@@ -203,15 +204,16 @@ int main()
 {
     stream::ignore_sigpipe();
 
-    SettingsRegistry::instance().loadJson("stream_client_settings.json");
+    SettingsRegistry::instance().loadJson("decode_client_settings.json");
 
-    Log::init(g_settings->logLevel, "stream_client.log");
+    Log::init(g_settings->logLevel, "decode_client.log");
+    stream::install_ffmpeg_log_bridge();
     auto imguiSink = std::make_shared<ImGuiLogSink_mt>();
     imguiSink->set_pattern("%^[%H:%M:%S.%e] [%n] [%l] %v%$");
     Log::addSink(imguiSink);
     auto log = Log::get("client");
     log->info(
-        "Stream client starting (defaultServer={}:{}, logLevel={})",
+        "Decode client starting (defaultServer={}:{}, logLevel={})",
         g_settings->serverIp,
         g_settings->serverPort,
         g_settings->logLevel);
@@ -233,7 +235,16 @@ int main()
 
     auto streamTexture = std::make_unique<stream::GlFrameTexture>();
 
-    auto* clientLayer = new StreamClientLayer(endpoint, *streamTexture, frameReceiver, statsReceiver);
+    auto decoder = std::make_unique<stream::H264Decoder>();
+    if (!decoder->init())
+    {
+        log->error("H264 decoder init failed");
+        return 1;
+    }
+    streamTexture->set_decode_fn([&](const stream::Frame& h264, stream::Frame& rgb)
+                                 { return decoder->decode(h264, rgb); });
+
+    auto* clientLayer = new DecodeClientLayer(endpoint, *streamTexture, frameReceiver, statsReceiver);
     app.pushLayer(std::unique_ptr<stream::GlLayer>(clientLayer));
     app.pushLayer(std::make_unique<stream::ImGuiLogLayer>(imguiSink));
 
@@ -245,8 +256,7 @@ int main()
 
     g_settings->serverIp   = clientLayer->ip();
     g_settings->serverPort = clientLayer->port();
-    SettingsRegistry::instance().saveJson("stream_client_settings.json");
-    log->info("Settings saved to stream_client_settings.json. Exiting.");
-
+    SettingsRegistry::instance().saveJson("decode_client_settings.json");
+    log->info("Settings saved. Exiting.");
     return 0;
 }

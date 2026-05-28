@@ -39,16 +39,16 @@ private:
     void deliver_stats(const ClientStats& stats);
     void close_current_connection();
 
-    dc::SenderPort<Frame>&       frames_;
-    dc::SenderPort<ClientStats>& stats_;
-    std::atomic<bool>            running_{false};
-    std::atomic<bool>            connected_requested_{false};
-    std::thread                  thread_;
-    std::mutex                   request_mutex_;
-    std::condition_variable      request_cv_;
-    ClientEndpointConfig         config_;
-    std::mutex                   state_mutex_;
-    class TcpConnection*         connection_ = nullptr;
+    dc::SenderPort<Frame>&       m_frames;
+    dc::SenderPort<ClientStats>& m_stats;
+    std::atomic<bool>            m_running{false};
+    std::atomic<bool>            m_connected_requested{false};
+    std::thread                  m_thread;
+    std::mutex                   m_request_mutex;
+    std::condition_variable      m_request_cv;
+    ClientEndpointConfig         m_config;
+    std::mutex                   m_state_mutex;
+    class TcpConnection*         m_connection = nullptr;
 };
 
 } // namespace stream

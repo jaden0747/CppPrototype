@@ -66,6 +66,8 @@ size_t Frame::expected_size() const
 
 bool Frame::valid() const
 {
+    if (compression == Compression::H264)
+        return !pixels.empty() && pixels.size() <= max_frame_payload_size;
     const size_t expected = expected_size();
     return expected > 0 && expected <= max_frame_payload_size && pixels.size() == expected;
 }

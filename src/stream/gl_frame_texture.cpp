@@ -1,7 +1,7 @@
 #include "stream/gl_frame_texture.hpp"
 
-#include <glad/glad.h>
 #include <GLFW/glfw3.h>
+#include <glad/glad.h>
 
 namespace stream
 {
@@ -21,15 +21,38 @@ void configure_texture()
 
 GlFrameTexture::GlFrameTexture()
 {
-    glGenTextures(1, &texture_);
-    glBindTexture(GL_TEXTURE_2D, texture_);
+    glGenTextures(1, &m_texture);
+    glBindTexture(GL_TEXTURE_2D, m_texture);
     configure_texture();
 }
 
 GlFrameTexture::~GlFrameTexture()
 {
-    if (texture_ != 0)
-        glDeleteTextures(1, &texture_);
+    if (m_texture != 0)
+        glDeleteTextures(1, &m_texture);
+}
+
+void GlFrameTexture::set_decode_fn(std::function<bool(const Frame&, Frame&)> fn)
+{
+    m_decode_fn = std::move(fn);
+}
+
+void GlFrameTexture::upload_rgb(const Frame& frame)
+{
+    glBindTexture(GL_TEXTURE_2D, m_texture);
+    if (!m_ready || frame.width != m_width || frame.height != m_height)
+    {
+        glTexImage2D(
+            GL_TEXTURE_2D, 0, GL_RGB, frame.width, frame.height, 0, GL_RGB, GL_UNSIGNED_BYTE, frame.pixels.data());
+    }
+    else
+    {
+        glTexSubImage2D(
+            GL_TEXTURE_2D, 0, 0, 0, frame.width, frame.height, GL_RGB, GL_UNSIGNED_BYTE, frame.pixels.data());
+    }
+    m_width  = frame.width;
+    m_height = frame.height;
+    m_ready  = true;
 }
 
 bool GlFrameTexture::update(dc::ReceiverPort<Frame>& frames)
@@ -40,40 +63,21 @@ bool GlFrameTexture::update(dc::ReceiverPort<Frame>& frames)
     if (frames.hasNewData())
     {
         const Frame* frame = frames.getData();
-        if (frame && frame->compression == Compression::None && frame->format == PixelFormat::Rgb8 &&
-            !frame->pixels.empty())
+        if (frame && !frame->pixels.empty())
         {
-            glBindTexture(GL_TEXTURE_2D, texture_);
-            if (!ready_ || frame->width != width_ || frame->height != height_)
+            if (frame->compression == Compression::H264 && m_decode_fn)
             {
-                glTexImage2D(
-                    GL_TEXTURE_2D,
-                    0,
-                    GL_RGB,
-                    frame->width,
-                    frame->height,
-                    0,
-                    GL_RGB,
-                    GL_UNSIGNED_BYTE,
-                    frame->pixels.data());
+                if (m_decode_fn(*frame, m_decode_buf))
+                {
+                    upload_rgb(m_decode_buf);
+                    changed = true;
+                }
             }
-            else
+            else if (frame->compression == Compression::None && frame->format == PixelFormat::Rgb8)
             {
-                glTexSubImage2D(
-                    GL_TEXTURE_2D,
-                    0,
-                    0,
-                    0,
-                    frame->width,
-                    frame->height,
-                    GL_RGB,
-                    GL_UNSIGNED_BYTE,
-                    frame->pixels.data());
+                upload_rgb(*frame);
+                changed = true;
             }
-            width_  = frame->width;
-            height_ = frame->height;
-            ready_  = true;
-            changed = true;
         }
     }
     frames.cleanup();
@@ -83,22 +87,22 @@ bool GlFrameTexture::update(dc::ReceiverPort<Frame>& frames)
 
 uint32_t GlFrameTexture::texture() const
 {
-    return texture_;
+    return m_texture;
 }
 
 int GlFrameTexture::width() const
 {
-    return width_;
+    return m_width;
 }
 
 int GlFrameTexture::height() const
 {
-    return height_;
+    return m_height;
 }
 
 bool GlFrameTexture::ready() const
 {
-    return ready_;
+    return m_ready;
 }
 
 } // namespace stream

@@ -13,9 +13,9 @@ StreamServerEndpoint::StreamServerEndpoint(
     ServerEndpointConfig         config,
     dc::ReceiverPort<Frame>&     frames,
     dc::SenderPort<ServerStats>& stats)
-    : config_(config)
-    , frames_(frames)
-    , stats_(stats)
+    : m_config(config)
+    , m_frames(frames)
+    , m_stats(stats)
 {
 }
 
@@ -26,72 +26,72 @@ StreamServerEndpoint::~StreamServerEndpoint()
 
 void StreamServerEndpoint::start()
 {
-    if (running_.exchange(true))
+    if (m_running.exchange(true))
         return;
-    thread_ = std::thread(&StreamServerEndpoint::run, this);
+    m_thread = std::thread(&StreamServerEndpoint::run, this);
 }
 
 void StreamServerEndpoint::stop()
 {
-    if (!running_.exchange(false))
+    if (!m_running.exchange(false))
         return;
 
     {
-        std::lock_guard<std::mutex> lock(state_mutex_);
-        if (client_)
-            client_->close();
-        if (listener_)
-            listener_->close();
+        std::lock_guard<std::mutex> lock(m_state_mutex);
+        if (m_client)
+            m_client->close();
+        if (m_listener)
+            m_listener->close();
     }
-    frame_cv_.notify_all();
+    m_frame_cv.notify_all();
 
-    if (thread_.joinable())
-        thread_.join();
+    if (m_thread.joinable())
+        m_thread.join();
 }
 
 void StreamServerEndpoint::notify_frame_available()
 {
-    frame_cv_.notify_one();
+    m_frame_cv.notify_one();
 }
 
 void StreamServerEndpoint::deliver_stats(const ServerStats& stats)
 {
-    ServerStats* slot = stats_.reserve();
+    ServerStats* slot = m_stats.reserve();
     if (!slot)
         return;
     *slot = stats;
-    stats_.deliver();
+    m_stats.deliver();
 }
 
 void StreamServerEndpoint::run()
 {
     auto        log = Log::get("net");
-    TcpListener listener(config_.listen_port);
+    TcpListener listener(m_config.listen_port);
     {
-        std::lock_guard<std::mutex> lock(state_mutex_);
-        listener_ = &listener;
+        std::lock_guard<std::mutex> lock(m_state_mutex);
+        m_listener = &listener;
     }
 
     if (!listener.is_open())
     {
-        log->error("Failed to listen on TCP :{}", config_.listen_port);
+        log->error("Failed to listen on TCP :{}", m_config.listen_port);
         return;
     }
 
-    log->info("Listening on TCP :{}", config_.listen_port);
+    log->info("Listening on TCP :{}", m_config.listen_port);
 
-    while (running_)
+    while (m_running)
     {
-        auto accepted = listener.accept_for(config_.accept_wait);
-        if (!running_)
+        auto accepted = listener.accept_for(m_config.accept_wait);
+        if (!m_running)
             break;
         if (!accepted)
             continue;
 
         TcpConnection client = std::move(*accepted);
         {
-            std::lock_guard<std::mutex> lock(state_mutex_);
-            client_ = &client;
+            std::lock_guard<std::mutex> lock(m_state_mutex);
+            m_client = &client;
         }
 
         ServerStats snapshot;
@@ -100,40 +100,40 @@ void StreamServerEndpoint::run()
         log->info("Client connected");
         deliver_stats(snapshot);
 
-        while (running_ && client.is_open())
+        while (m_running && client.is_open())
         {
             {
-                std::unique_lock<std::mutex> lock(frame_mutex_);
-                frame_cv_.wait_for(lock, config_.frame_wait);
+                std::unique_lock<std::mutex> lock(m_frame_mutex);
+                m_frame_cv.wait_for(lock, m_config.frame_wait);
             }
-            if (!running_)
+            if (!m_running)
                 break;
 
-            frames_.update();
-            if (!frames_.hasNewData())
+            m_frames.update();
+            if (!m_frames.hasNewData())
             {
-                frames_.cleanup();
+                m_frames.cleanup();
                 continue;
             }
 
-            const Frame* frame = frames_.getData();
+            const Frame* frame = m_frames.getData();
             if (!frame || !frame->valid())
             {
-                frames_.cleanup();
+                m_frames.cleanup();
                 continue;
             }
 
             if (!write_frame(client, *frame))
             {
                 log->warn("write_frame failed; client disconnected");
-                frames_.cleanup();
+                m_frames.cleanup();
                 break;
             }
 
             snapshot.bytes_sent += frame_header_wire_size + frame->pixels.size();
             snapshot.frames_sent++;
             deliver_stats(snapshot);
-            frames_.cleanup();
+            m_frames.cleanup();
 
             if (snapshot.frames_sent % 300 == 0)
                 log->debug(
@@ -142,9 +142,9 @@ void StreamServerEndpoint::run()
 
         client.close();
         {
-            std::lock_guard<std::mutex> lock(state_mutex_);
-            if (client_ == &client)
-                client_ = nullptr;
+            std::lock_guard<std::mutex> lock(m_state_mutex);
+            if (m_client == &client)
+                m_client = nullptr;
         }
 
         log->info("Client disconnected");
@@ -152,8 +152,8 @@ void StreamServerEndpoint::run()
     }
 
     {
-        std::lock_guard<std::mutex> lock(state_mutex_);
-        listener_ = nullptr;
+        std::lock_guard<std::mutex> lock(m_state_mutex);
+        m_listener = nullptr;
     }
     log->info("Net thread exited");
 }

@@ -4,6 +4,7 @@
 
 #include <nlohmann/json.hpp>
 
+#include <chrono>
 #include <cstdint>
 #include <fstream>
 #include <functional>
@@ -25,7 +26,7 @@ class SettingsRegistry
 public:
     struct Entry
     {
-        void*                                              ptr;
+        void*                                             ptr;
         std::function<void(void*, const nlohmann::json&)> loader;
         std::function<nlohmann::json(const void*)>        saver;
         std::function<void(void*)>                        onLoaded;
@@ -63,12 +64,34 @@ public:
         m_items.emplace(key, std::move(entry));
     }
 
+    // Mark settings as changed. tickAutoSave() will persist them after a short delay.
+    void markDirty()
+    {
+        m_dirty   = true;
+        m_dirtyAt = std::chrono::steady_clock::now();
+    }
+
+    // Call once per frame. Saves to the path last passed to loadJson,
+    // but only after 1 s of inactivity to avoid writing on every slider tick.
+    void tickAutoSave()
+    {
+        if (!m_dirty || m_autoSavePath.empty())
+            return;
+        if (std::chrono::steady_clock::now() - m_dirtyAt < std::chrono::seconds(1))
+            return;
+        saveJson(m_autoSavePath);
+        m_dirty = false;
+    }
+
     void loadJson(const std::string& path)
     {
+        m_autoSavePath = path;
+
         std::ifstream f(path);
         if (!f.is_open())
         {
-            std::cerr << "[SettingsRegistry] Cannot open: \"" << path << "\"\n";
+            // File doesn't exist yet — write defaults so users can inspect and edit them.
+            saveJson(path);
             return;
         }
 
@@ -161,5 +184,8 @@ private:
     SettingsRegistry(const SettingsRegistry&)            = delete;
     SettingsRegistry& operator=(const SettingsRegistry&) = delete;
 
-    std::map<std::string, Entry> m_items;
+    std::map<std::string, Entry>          m_items;
+    std::string                           m_autoSavePath;
+    bool                                  m_dirty   = false;
+    std::chrono::steady_clock::time_point m_dirtyAt = {};
 };

@@ -42,16 +42,16 @@ private:
     void run();
     void deliver_stats(const ServerStats& stats);
 
-    ServerEndpointConfig         config_;
-    dc::ReceiverPort<Frame>&     frames_;
-    dc::SenderPort<ServerStats>& stats_;
-    std::atomic<bool>            running_{false};
-    std::thread                  thread_;
-    std::mutex                   frame_mutex_;
-    std::condition_variable      frame_cv_;
-    std::mutex                   state_mutex_;
-    class TcpListener*           listener_ = nullptr;
-    class TcpConnection*         client_   = nullptr;
+    ServerEndpointConfig         m_config;
+    dc::ReceiverPort<Frame>&     m_frames;
+    dc::SenderPort<ServerStats>& m_stats;
+    std::atomic<bool>            m_running{false};
+    std::thread                  m_thread;
+    std::mutex                   m_frame_mutex;
+    std::condition_variable      m_frame_cv;
+    std::mutex                   m_state_mutex;
+    class TcpListener*           m_listener = nullptr;
+    class TcpConnection*         m_client   = nullptr;
 };
 
 } // namespace stream

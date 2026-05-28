@@ -16,6 +16,7 @@ find_package(GTest REQUIRED)
 find_package(Threads REQUIRED)
 find_package(spdlog REQUIRED)
 find_package(glad CONFIG REQUIRED)
+find_package(ffmpeg REQUIRED)
 
 # ---------------------------------------------------------------------------
 # Dear ImGui (from submodule in external/imgui)
@@ -73,6 +74,7 @@ target_link_libraries(stream_core PUBLIC
     OpenGL::GL
     glad::glad
     spdlog::spdlog_header_only
+    nlohmann_json::nlohmann_json
     Threads::Threads
 )
 if(WIN32)
@@ -162,6 +164,67 @@ target_link_libraries(stream_client PRIVATE
 )
 if(APPLE)
     target_compile_definitions(stream_client PRIVATE GL_SILENCE_DEPRECATION)
+endif()
+
+# ---------------------------------------------------------------------------
+# H.264 codec library — Phase 2: encoder + decoder (requires FFmpeg/libx264)
+# Kept separate from stream_core so Phase 1 apps remain FFmpeg-free.
+# ---------------------------------------------------------------------------
+add_library(stream_h264
+    src/stream/h264_encoder.cpp
+    src/stream/h264_decoder.cpp
+    src/stream/ffmpeg_log.cpp
+)
+target_include_directories(stream_h264 PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+target_link_libraries(stream_h264 PUBLIC
+    stream_core
+    ffmpeg::avcodec
+    ffmpeg::avutil
+    ffmpeg::swscale
+)
+
+# ---------------------------------------------------------------------------
+# Encode server — Phase 2: H.264-encoded GL capture + TCP sender
+# ---------------------------------------------------------------------------
+add_executable(encode_server app/encode_server.cpp)
+target_include_directories(encode_server PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+target_link_libraries(encode_server PRIVATE
+    stream_h264
+    stream_core
+    imgui
+    glfw
+    OpenGL::GL
+    Threads::Threads
+    nlohmann_json::nlohmann_json
+    spdlog::spdlog_header_only
+)
+if(APPLE)
+    target_compile_definitions(encode_server PRIVATE GL_SILENCE_DEPRECATION)
+endif()
+
+# ---------------------------------------------------------------------------
+# Decode client — Phase 2: TCP receiver + H.264 decode + ImGui display
+# ---------------------------------------------------------------------------
+add_executable(decode_client app/decode_client.cpp)
+target_include_directories(decode_client PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+target_link_libraries(decode_client PRIVATE
+    stream_h264
+    stream_core
+    imgui
+    glfw
+    OpenGL::GL
+    Threads::Threads
+    nlohmann_json::nlohmann_json
+    spdlog::spdlog_header_only
+)
+if(APPLE)
+    target_compile_definitions(decode_client PRIVATE GL_SILENCE_DEPRECATION)
 endif()
 
 # ---------------------------------------------------------------------------

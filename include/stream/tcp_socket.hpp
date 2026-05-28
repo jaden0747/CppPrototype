@@ -31,7 +31,7 @@ private:
     struct Impl;
     explicit TcpConnection(std::unique_ptr<Impl> impl);
 
-    std::unique_ptr<Impl> impl_;
+    std::unique_ptr<Impl> m_impl;
 
     friend class TcpListener;
     friend std::optional<TcpConnection> connect_tcp(const std::string&, uint16_t);
@@ -55,7 +55,7 @@ public:
 
 private:
     struct Impl;
-    std::unique_ptr<Impl> impl_;
+    std::unique_ptr<Impl> m_impl;
 };
 
 std::optional<TcpConnection> connect_tcp(const std::string& host, uint16_t port);

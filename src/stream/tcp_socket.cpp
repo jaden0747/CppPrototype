@@ -28,7 +28,7 @@ struct TcpListener::Impl
 TcpConnection::TcpConnection() = default;
 
 TcpConnection::TcpConnection(std::unique_ptr<Impl> impl)
-    : impl_(std::move(impl))
+    : m_impl(std::move(impl))
 {
 }
 
@@ -42,64 +42,64 @@ TcpConnection& TcpConnection::operator=(TcpConnection&& other) noexcept = defaul
 
 bool TcpConnection::read_exact(void* dst, size_t size)
 {
-    if (!impl_ || !impl_->socket.is_open())
+    if (!m_impl || !m_impl->socket.is_open())
         return false;
 
     asio::error_code ec;
-    asio::read(impl_->socket, asio::buffer(dst, size), asio::transfer_exactly(size), ec);
+    asio::read(m_impl->socket, asio::buffer(dst, size), asio::transfer_exactly(size), ec);
     return !ec;
 }
 
 bool TcpConnection::write_exact(const void* src, size_t size)
 {
-    if (!impl_ || !impl_->socket.is_open())
+    if (!m_impl || !m_impl->socket.is_open())
         return false;
 
     asio::error_code ec;
-    asio::write(impl_->socket, asio::buffer(src, size), asio::transfer_exactly(size), ec);
+    asio::write(m_impl->socket, asio::buffer(src, size), asio::transfer_exactly(size), ec);
     return !ec;
 }
 
 void TcpConnection::close()
 {
-    if (!impl_ || !impl_->socket.is_open())
+    if (!m_impl || !m_impl->socket.is_open())
         return;
 
     asio::error_code ignored;
-    impl_->socket.shutdown(tcp::socket::shutdown_both, ignored);
-    impl_->socket.close(ignored);
+    m_impl->socket.shutdown(tcp::socket::shutdown_both, ignored);
+    m_impl->socket.close(ignored);
 }
 
 bool TcpConnection::is_open() const
 {
-    return impl_ && impl_->socket.is_open();
+    return m_impl && m_impl->socket.is_open();
 }
 
 TcpListener::TcpListener(uint16_t port)
-    : impl_(std::make_unique<Impl>())
+    : m_impl(std::make_unique<Impl>())
 {
     asio::error_code ec;
     tcp::endpoint    endpoint(tcp::v4(), port);
-    impl_->acceptor.open(endpoint.protocol(), ec);
+    m_impl->acceptor.open(endpoint.protocol(), ec);
     if (ec)
         return;
 
-    impl_->acceptor.set_option(tcp::acceptor::reuse_address(true), ec);
-    impl_->acceptor.bind(endpoint, ec);
-    if (ec)
-    {
-        close();
-        return;
-    }
-
-    impl_->acceptor.listen(asio::socket_base::max_listen_connections, ec);
+    m_impl->acceptor.set_option(tcp::acceptor::reuse_address(true), ec);
+    m_impl->acceptor.bind(endpoint, ec);
     if (ec)
     {
         close();
         return;
     }
 
-    impl_->acceptor.non_blocking(true, ec);
+    m_impl->acceptor.listen(asio::socket_base::max_listen_connections, ec);
+    if (ec)
+    {
+        close();
+        return;
+    }
+
+    m_impl->acceptor.non_blocking(true, ec);
 }
 
 TcpListener::~TcpListener()
@@ -112,7 +112,7 @@ TcpListener& TcpListener::operator=(TcpListener&& other) noexcept = default;
 
 std::optional<TcpConnection> TcpListener::accept_for(std::chrono::milliseconds timeout)
 {
-    if (!impl_ || !impl_->acceptor.is_open())
+    if (!m_impl || !m_impl->acceptor.is_open())
         return std::nullopt;
 
     const auto deadline = std::chrono::steady_clock::now() + timeout;
@@ -120,7 +120,7 @@ std::optional<TcpConnection> TcpListener::accept_for(std::chrono::milliseconds t
     {
         auto             conn = std::unique_ptr<TcpConnection::Impl>(new TcpConnection::Impl());
         asio::error_code ec;
-        impl_->acceptor.accept(conn->socket, ec);
+        m_impl->acceptor.accept(conn->socket, ec);
         if (!ec)
             return TcpConnection(std::move(conn));
         if (ec != asio::error::would_block && ec != asio::error::try_again)
@@ -133,16 +133,16 @@ std::optional<TcpConnection> TcpListener::accept_for(std::chrono::milliseconds t
 
 void TcpListener::close()
 {
-    if (!impl_ || !impl_->acceptor.is_open())
+    if (!m_impl || !m_impl->acceptor.is_open())
         return;
 
     asio::error_code ignored;
-    impl_->acceptor.close(ignored);
+    m_impl->acceptor.close(ignored);
 }
 
 bool TcpListener::is_open() const
 {
-    return impl_ && impl_->acceptor.is_open();
+    return m_impl && m_impl->acceptor.is_open();
 }
 
 std::optional<TcpConnection> connect_tcp(const std::string& host, uint16_t port)

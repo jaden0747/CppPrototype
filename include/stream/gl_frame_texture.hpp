@@ -4,6 +4,7 @@
 #include "stream/frame.hpp"
 
 #include <cstdint>
+#include <functional>
 
 namespace stream
 {
@@ -19,16 +20,24 @@ public:
 
     bool update(dc::ReceiverPort<Frame>& frames);
 
+    // Optional decode hook: called when a compressed frame arrives.
+    // Writes decoded raw RGB pixels into rgb_out; returns false on failure.
+    void set_decode_fn(std::function<bool(const Frame&, Frame&)> fn);
+
     uint32_t texture() const;
     int      width() const;
     int      height() const;
     bool     ready() const;
 
 private:
-    uint32_t texture_ = 0;
-    int      width_   = 0;
-    int      height_  = 0;
-    bool     ready_   = false;
+    void upload_rgb(const Frame& frame);
+
+    uint32_t                                  m_texture = 0;
+    int                                       m_width   = 0;
+    int                                       m_height  = 0;
+    bool                                      m_ready   = false;
+    std::function<bool(const Frame&, Frame&)> m_decode_fn;
+    Frame                                     m_decode_buf;
 };
 
 } // namespace stream

@@ -13,7 +13,8 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-BUILD_DIR="$SCRIPT_DIR/../build/Debug"
+WORKSPACE_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+BUILD_DIR="$WORKSPACE_DIR/build/Debug"
 
 # ── Locate binaries ────────────────────────────────────────────────────────
 SERVER="$BUILD_DIR/stream_server"
@@ -33,8 +34,8 @@ fi
 
 # ── Start server ───────────────────────────────────────────────────────────
 echo "[start_stream] Starting stream_server …"
-cd "$BUILD_DIR"
-./stream_server &
+cd "$WORKSPACE_DIR"
+"$SERVER" &
 SERVER_PID=$!
 
 # Give the server 1 second to open its TCP socket before the client connects
@@ -42,7 +43,7 @@ sleep 1
 
 # ── Start client ───────────────────────────────────────────────────────────
 echo "[start_stream] Starting stream_client …"
-./stream_client &
+"$CLIENT" &
 CLIENT_PID=$!
 
 echo ""

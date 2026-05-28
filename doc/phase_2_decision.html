@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stream Pipeline — Phase 2 Changes &amp; Decision Log</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #1a1a2e; color: #e0e0e0; padding: 2rem; }
+  h1 { text-align: center; margin-bottom: 0.5rem; color: #00d4ff; font-size: 1.8rem; }
+  .subtitle { text-align: center; color: #888; margin-bottom: 2rem; font-size: 0.9rem; }
+
+  /* Phase tracker */
+  .phases { display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap; margin-bottom: 2.5rem; }
+  .phase { padding: 0.5rem 1.2rem; border-radius: 20px; font-size: 0.82rem; font-weight: 600; border: 1px solid transparent; }
+  .phase.done    { background: #0d4f2a; border-color: #1a9e54; color: #4ade80; }
+  .phase.active  { background: #1a3a5c; border-color: #00d4ff; color: #00d4ff; animation: pulse 1.5s ease-in-out infinite; }
+  .phase.pending { background: #2a2a3e; border-color: #444; color: #666; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.6} }
+
+  /* Pipeline diagram */
+  .pipeline { max-width: 900px; margin: 0 auto 2.5rem; background: #16213e; border: 1px solid #333; border-radius: 10px; padding: 1.5rem; }
+  .pipeline h2 { color: #00d4ff; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 1rem; }
+  .pipeline pre { background: #0f1e35; border-radius: 6px; padding: 1rem; font-size: 0.8rem; color: #a0cfff; line-height: 1.6; overflow-x: auto; }
+
+  /* Sections */
+  .section { max-width: 900px; margin: 0 auto 2rem; }
+  .section > h2 { color: #00d4ff; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 1rem; border-bottom: 1px solid #333; padding-bottom: 0.4rem; }
+
+  /* Change cards */
+  .change { background: #16213e; border: 1px solid #2a3a5e; border-radius: 8px; margin-bottom: 1.2rem; overflow: hidden; }
+  .change-header { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem; background: #0f1e35; flex-wrap: wrap; }
+  .change-id { font-size: 0.7rem; color: #555; font-weight: 700; min-width: 36px; }
+  .change-title { font-weight: 600; color: #fff; flex: 1; font-size: 0.95rem; }
+  .change-files { font-size: 0.7rem; color: #888; font-family: 'SF Mono', Menlo, monospace; }
+  .tag { font-size: 0.68rem; padding: 2px 8px; border-radius: 10px; font-weight: 600; white-space: nowrap; }
+  .tag-new      { background: #0d4f2a; color: #4ade80; border: 1px solid #1a9e54; }
+  .tag-fix      { background: #4f1a0d; color: #f97316; border: 1px solid #9e3a1a; }
+  .tag-perf     { background: #2d1b69; color: #a78bfa; border: 1px solid #4c1d95; }
+  .tag-infra    { background: #0d2a4f; color: #60a5fa; border: 1px solid #1e40af; }
+  .tag-logging  { background: #2a2d0d; color: #d4d44a; border: 1px solid #5f641a; }
+
+  .change-body { padding: 1.1rem 1.2rem; display: grid; gap: 1rem; }
+
+  .label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: #888; margin-bottom: 0.3rem; }
+
+  .why   { background: #0f2a1a; border-left: 3px solid #1a9e54; padding: 0.6rem 0.8rem; border-radius: 0 4px 4px 0; font-size: 0.85rem; line-height: 1.6; }
+  .what  { background: #0f1e35; border-left: 3px solid #00d4ff; padding: 0.6rem 0.8rem; border-radius: 0 4px 4px 0; font-size: 0.85rem; line-height: 1.6; }
+  .bug   { background: #2a1a0a; border-left: 3px solid #f97316; padding: 0.6rem 0.8rem; border-radius: 0 4px 4px 0; font-size: 0.85rem; line-height: 1.6; }
+  .impact { background: #1a2d1a; border-left: 3px solid #86efac; padding: 0.6rem 0.8rem; border-radius: 0 4px 4px 0; font-size: 0.85rem; line-height: 1.6; }
+
+  code { font-family: 'SF Mono', Menlo, 'Courier New', monospace; background: #0a1628; color: #93c5fd; padding: 1px 5px; border-radius: 3px; font-size: 0.82em; }
+  pre.diff { background: #0a1628; border-radius: 6px; padding: 1rem; font-size: 0.78rem; line-height: 1.55; overflow-x: auto; font-family: 'SF Mono', Menlo, monospace; white-space: pre; }
+  .diff-add  { color: #4ade80; }
+  .diff-rem  { color: #f87171; }
+  .diff-hdr  { color: #818cf8; }
+  .diff-ctx  { color: #6b7280; }
+
+  ul.bullets { padding-left: 1.2rem; }
+  ul.bullets li { margin-bottom: 0.3rem; font-size: 0.85rem; line-height: 1.6; }
+
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  @media (max-width: 640px) { .two-col { grid-template-columns: 1fr; } }
+
+  /* File list */
+  .files-grid { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+  .file-chip { background: #0f1e35; border: 1px solid #2a3a5e; border-radius: 4px; padding: 0.2rem 0.6rem; font-family: 'SF Mono', Menlo, monospace; font-size: 0.72rem; color: #93c5fd; }
+  .file-chip.new-file { border-color: #1a9e54; color: #4ade80; }
+
+  /* Summary table */
+  table { width: 100%; border-collapse: collapse; font-size: 0.83rem; }
+  th { background: #0f1e35; color: #00d4ff; text-align: left; padding: 0.5rem 0.75rem; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.8px; }
+  td { padding: 0.5rem 0.75rem; border-bottom: 1px solid #1e2a3e; vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: #0f1e35; }
+</style>
+</head>
+<body>
+
+<h1>Stream Pipeline — Phase 2 Changes</h1>
+<p class="subtitle">H.264 Encode/Decode · Retina Performance · Logging Fixes · 2026-05-25</p>
+
+<!-- Phase tracker -->
+<div class="phases">
+  <div class="phase done">Phase 1 — Raw TCP</div>
+  <div class="phase active">Phase 2 — H.264 Codec</div>
+  <div class="phase pending">Phase 3 — UDP + FEC</div>
+  <div class="phase pending">Phase 4 — RTSP</div>
+  <div class="phase pending">Phase 5 — Input</div>
+  <div class="phase pending">Phase 6 — Polish</div>
+</div>
+
+<!-- Architecture diagram -->
+<div class="pipeline">
+  <h2>Phase 2 Pipeline Architecture</h2>
+  <pre>
+SERVER (encode_server)                    CLIENT (decode_client)
+──────────────────────────────────────    ──────────────────────────────────────
+ OpenGL render loop (ImGui scene)
+      │
+      ▼  after_render callback
+ GlFrameCapture::capture(fbW, fbH)
+      │
+      ├─[retina?]─ glBlitFramebuffer ──── GPU downscale 2560×1440 → 1280×720
+      │                                   (avoids reading 11MB across GPU-CPU bus)
+      │
+      ▼  glReadPixels (reads from FBO at logical size)
+ raw RGB pixels (1280×720 × 3B = 2.8MB)
+      │  flip rows (OpenGL is bottom-up)
+      ▼
+ encode_fn callback (set_encode_fn)
+      │
+      ▼
+ H264Encoder::encode(Frame&)
+      │  sws_scale: RGB → YUV420P
+      │  avcodec_send_frame → avcodec_receive_packet
+      │  collect all NAL packets into Frame::pixels
+      ▼
+ Frame { compression=H264, pixels=[NAL bytes] }
+      │
+      ▼
+ StreamServerEndpoint (TCP :9999)
+      │  frame_protocol: [w][h][fmt][cmp][pad][len][NAL bytes]
+      │────────────────── TCP ──────────────────────────────────►
+                                                         StreamClientEndpoint
+                                                               │
+                                                         GlFrameTexture::update()
+                                                               │
+                                                         decode_fn callback
+                                                               │
+                                                         H264Decoder::decode(h264, rgb_out)
+                                                               │  avcodec_send_packet (Annex B)
+                                                               │  avcodec_receive_frame
+                                                               │  sws_scale: YUV420P → RGB
+                                                               ▼
+                                                         glTexImage2D / glTexSubImage2D
+                                                               │
+                                                         ImGui::Image display</pre>
+</div>
+
+<!-- Files changed summary -->
+<div class="section">
+  <h2>Files Changed</h2>
+  <div class="change">
+    <div class="change-body" style="padding: 0.8rem 1rem;">
+      <div>
+        <div class="label">New Files</div>
+        <div class="files-grid">
+          <span class="file-chip new-file">app/encode_server.cpp</span>
+          <span class="file-chip new-file">app/decode_client.cpp</span>
+          <span class="file-chip new-file">include/stream/h264_encoder.hpp</span>
+          <span class="file-chip new-file">src/stream/h264_encoder.cpp</span>
+          <span class="file-chip new-file">include/stream/h264_decoder.hpp</span>
+          <span class="file-chip new-file">src/stream/h264_decoder.cpp</span>
+          <span class="file-chip new-file">include/stream/ffmpeg_log.hpp</span>
+          <span class="file-chip new-file">src/stream/ffmpeg_log.cpp</span>
+          <span class="file-chip new-file">script/start_encode_stream.sh</span>
+        </div>
+      </div>
+      <div>
+        <div class="label">Modified Files</div>
+        <div class="files-grid">
+          <span class="file-chip">CMakeLists.txt</span>
+          <span class="file-chip">conanfile.txt</span>
+          <span class="file-chip">include/mylib/log.hpp</span>
+          <span class="file-chip">include/stream/gl_frame_capture.hpp</span>
+          <span class="file-chip">src/stream/gl_frame_capture.cpp</span>
+          <span class="file-chip">include/stream/gl_frame_texture.hpp</span>
+          <span class="file-chip">src/stream/gl_frame_texture.cpp</span>
+          <span class="file-chip">src/stream/frame_protocol.cpp</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     SECTION: Build System
+     ═══════════════════════════════════════════════ -->
+<div class="section">
+  <h2>Build System Changes</h2>
+
+  <!-- C1: conanfile.txt -->
+  <div class="change">
+    <div class="change-header">
+      <span class="change-id">C-01</span>
+      <span class="change-title">Add FFmpeg dependency to Conan</span>
+      <span class="tag tag-infra">infra</span>
+      <span class="change-files">conanfile.txt</span>
+    </div>
+    <div class="change-body">
+      <div>
+        <div class="label">Why</div>
+        <div class="why">
+          Phase 2 requires H.264 encode (libx264) and decode (libavcodec). FFmpeg provides a
+          unified C API for both and is available in Conan Center. The version <code>ffmpeg/7.1.1</code>
+          was chosen because <code>ffmpeg/7.1</code> does not exist in the Conan Center registry
+          (discovered at install time). Unnecessary codecs (<code>vpx</code>, <code>opus</code>,
+          <code>mp3lame</code>, CLI programs) are disabled to keep the build fast and the binary small.
+        </div>
+      </div>
+      <div>
+        <div class="label">What Changed</div>
+        <pre class="diff"><span class="diff-hdr">--- conanfile.txt (before)</span>
+<span class="diff-hdr">+++ conanfile.txt (after)</span>
+<span class="diff-ctx"> spdlog/1.15.3</span>
+<span class="diff-add">+ffmpeg/7.1.1</span>
+<span class="diff-ctx"> </span>
+<span class="diff-ctx"> [options]</span>
+<span class="diff-add">+ffmpeg/*:with_libx264=True      # encoder codec</span>
+<span class="diff-add">+ffmpeg/*:with_programs=False    # no ffmpeg/ffprobe CLI binaries</span>
+<span class="diff-add">+ffmpeg/*:with_libvpx=False      # unused VP8/VP9 codec</span>
+<span class="diff-add">+ffmpeg/*:with_opus=False        # unused audio codec</span>
+<span class="diff-add">+ffmpeg/*:with_libmp3lame=False  # unused audio codec</span></pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- C2: CMakeLists -->
+  <div class="change">
+    <div class="change-header">
+      <span class="change-id">C-02</span>
+      <span class="change-title">Add <code>stream_h264</code> library + Phase 2 executables</span>
+      <span class="tag tag-infra">infra</span>
+      <span class="change-files">CMakeLists.txt</span>
+    </div>
+    <div class="change-body">
+      <div>
+        <div class="label">Why</div>
+        <div class="why">
+          FFmpeg must not leak into the Phase 1 apps (<code>stream_server</code>,
+          <code>stream_client</code>). Keeping FFmpeg in a separate <code>stream_h264</code> static
+          library means Phase 1 targets never link against it. The Phase 2 executables
+          (<code>encode_server</code>, <code>decode_client</code>) link against both
+          <code>stream_core</code> and <code>stream_h264</code>, while Phase 1 executables link
+          only against <code>stream_core</code>.
+        </div>
+      </div>
+      <div>
+        <div class="label">Dependency Graph</div>
+        <pre class="diff"><span class="diff-ctx">stream_core   ─── gl_frame_capture, gl_frame_texture, stream_server/client_endpoint
+                  (no FFmpeg — Phase 1 safe)
+
+stream_h264   ─── h264_encoder, h264_decoder, ffmpeg_log
+                  LINKS: stream_core + ffmpeg::avcodec + ffmpeg::avutil + ffmpeg::swscale
+
+encode_server ─── stream_h264 + stream_core + imgui + glfw
+decode_client ─── stream_h264 + stream_core + imgui + glfw</span></pre>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     SECTION: New Components
+     ═══════════════════════════════════════════════ -->
+<div class="section">
+  <h2>New Components</h2>
+
+  <!-- N1: H264Encoder -->
+  <div class="change">
+    <div class="change-header">
+      <span class="change-id">N-01</span>
+      <span class="change-title">H264Encoder — RGB frames → H.264 NAL bytes in-place</span>
+      <span class="tag tag-new">new</span>
+      <span class="change-files">include/stream/h264_encoder.hpp · src/stream/h264_encoder.cpp</span>
+    </div>
+    <div class="change-body">
+      <div>
+        <div class="label">Why</div>
+        <div class="why">
+          Raw RGB streaming (Phase 1) sends ~2.8 MB per frame at 1280×720. At 30 fps that is
+          ~84 MB/s — far beyond any realistic LAN or localhost buffer. H.264 at 4 Mbps compresses
+          the same frame to ~17 KB, a 165× reduction. <code>libx264</code> with
+          <code>ultrafast</code>/<code>zerolatency</code> preset encodes a 1280×720 frame in
+          &lt;1ms on a modern CPU, making real-time encoding viable.
+        </div>
+      </div>
+      <div>
+        <div class="label">Design Decisions</div>
+        <div class="what">
+          <ul class="bullets">
+            <li><strong>pImpl idiom</strong> — FFmpeg types (<code>AVCodecContext</code>, <code>AVFrame</code>, etc.)
+              are hidden inside <code>struct Impl</code>. Including FFmpeg headers in <code>h264_encoder.hpp</code>
+              would force every translation unit that includes it to also find FFmpeg, breaking the
+              Phase 1 / Phase 2 separation.</li>
+            <li><strong>In-place transform</strong> — <code>encode(Frame&amp;)</code> replaces
+              <code>frame.pixels</code> with NAL bytes and updates <code>frame.compression</code>,
+              <code>frame.width</code>, <code>frame.height</code>. This lets the encoder slot into
+              the existing <code>SenderPort&lt;Frame&gt;</code> pipeline without a separate buffer.</li>
+            <li><strong>Single sws pass</strong> — <code>sws_getContext</code> is configured to
+              convert <em>and</em> rescale in one call (RGB input_w×h → YUV420P enc_w×h). On
+              retina displays, this combined pass handles the 2×→1× downscale at zero extra cost.</li>
+            <li><strong>repeat_headers=1</strong> — Embeds SPS+PPS parameter sets before every IDR
+              frame. Without this, clients that connect mid-stream can never decode because they miss
+              the parameter sets that were only in the first packet.</li>
+            <li><strong>gop_size = fps/2</strong> — An IDR keyframe every 0.5 s ensures a newly
+              connected client recovers within half a second. The original roadmap suggested
+              <code>intra-refresh=1</code>, which was removed: intra-refresh replaces IDR frames
+              with progressive refresh, which eliminates the resync point that late-joining clients
+              depend on.</li>
+            <li><strong>No slice-max-size</strong> — <code>slice-max-size=1500</code> is an MTU hint
+              for UDP transport. On TCP, the transport layer handles fragmentation. Using it produces
+              40–70 slices per frame at 1280×720, exceeding the Conan-built FFmpeg decoder's hardcoded
+              <code>MAX_SLICES=32</code> limit and triggering decode warnings on every frame.</li>
+            <li><strong>max_b_frames=0</strong> — B-frames introduce display-order vs decode-order
+              reordering which adds latency. Zero B-frames keeps PTS==DTS for truly low-latency output.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- N2: H264Decoder -->
+  <div class="change">
+    <div class="change-header">
+      <span class="change-id">N-02</span>
+      <span class="change-title">H264Decoder — H.264 NAL bytes → raw RGB pixels</span>
+      <span class="tag tag-new">new</span>
+      <span class="change-files">include/stream/h264_decoder.hpp · src/stream/h264_decoder.cpp</span>
+    </div>
+    <div class="change-body">
+      <div>
+        <div class="label">Why</div>
+        <div class="why">
+          The client receives Annex B NAL bytes over TCP and must convert them back to raw RGB
+          pixels for OpenGL texture upload. FFmpeg's <code>libavcodec</code> provides the H.264
+          decoder; <code>libswscale</code> converts YUV420P (the decoded pixel format) back to RGB24.
+        </div>
+      </div>
+      <div>
+        <div class="label">Key Design Decision — No AVCodecParserContext</div>
+        <div class="what">
+          An earlier implementation used <code>AVCodecParserContext</code> to split the incoming
+          byte stream into individual NAL units before feeding them to the decoder. This caused
+          <code>non-existing PPS 0 referenced</code> / <code>decode_slice_header error</code>
+          messages on every single frame.
+          <br><br>
+          <strong>Root cause:</strong> The parser maintains state between calls. Our framing
+          protocol already delivers one complete encoder output blob per frame — the blobs are
+          perfectly framed at the TCP level. Feeding a pre-framed blob through a stateful parser
+          confused the parser's internal NAL boundary detection.
+          <br><br>
+          <strong>Fix:</strong> Feed the padded blob directly to <code>avcodec_send_packet</code>
+          without any parser. FFmpeg's decoder handles Annex B start codes internally. The parser
+          layer is only needed for unframed raw byte streams (e.g. reading a raw .h264 file with
+          no container).
+        </div>
+      </div>
+      <div>
+        <div class="label">Lazy sws reinit on resolution change</div>
+        <div class="what">
+          The <code>SwsContext</code> is recreated only when the decoded frame dimensions change.
+          This handles server-side resolution changes at runtime without requiring a full reconnect.
+          In steady state (fixed resolution), no allocation happens per frame.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- N3: ffmpeg_log bridge -->
+  <div class="change">
+    <div class="change-header">
+      <span class="change-id">N-03</span>
+      <span class="change-title">FFmpeg log bridge — route <code>av_log</code> through spdlog</span>
+      <span class="tag tag-logging">logging</span>
+      <span class="change-files">include/stream/ffmpeg_log.hpp · src/stream/ffmpeg_log.cpp</span>
+    </div>
+    <div class="change-body">
+      <div>
+        <div class="label">Why — Root Cause of Missing Logs</div>
+        <div class="bug">
+          FFmpeg's <code>av_log</code> system is completely separate from spdlog. By default it
+          calls <code>fprintf(stderr, ...)</code> directly. This means all FFmpeg messages
+          (<code>[h264 @ ptr] non-existing PPS</code>, <code>swscaler: No accelerated
+          colorspace</code>, etc.) go to the terminal's stderr and are never written to
+          <code>encode_server.log</code> or <code>decode_client.log</code>.
+        </div>
+      </div>
+      <div>
+        <div class="label">What Changed</div>
+        <div class="what">
+          <code>install_ffmpeg_log_bridge()</code> replaces FFmpeg's default stderr callback with
+          a custom one that:<br>
+          &bull; Drops <code>AV_LOG_VERBOSE</code> and below (avoids flooding logs with
+            per-frame debug output)<br>
+          &bull; Maps <code>AV_LOG_ERROR</code> → <code>spdlog::err</code>,
+            <code>AV_LOG_WARNING</code> → <code>spdlog::warn</code><br>
+          &bull; Uses <code>av_log_format_line2</code> to preserve the
+            <code>[h264 @ ptr]</code> context prefix FFmpeg adds<br>
+          &bull; Strips the trailing <code>\n</code> FFmpeg always appends<br>
+          &bull; Routes the message through <code>Log::get("ffmpeg")</code>, which writes to
+            both the file sink and the ImGui log panel<br>
+          &bull; Uses <code>std::call_once</code> so it is safe to call from multiple
+            init paths
+        </div>
+      </div>
+      <div>
+        <div class="label">After this change</div>
+        <div class="impact">
+          FFmpeg errors and warnings now appear in <code>encode_server.log</code>,
+          <code>decode_client.log</code>, and the in-app ImGui "Log" panel under the
+          logger name <code>[ffmpeg]</code>.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- N4: encode_server -->
+  <div class="change">
+    <div class="change-header">
+      <span class="change-id">N-04</span>
+      <span class="change-title">encode_server — Phase 2 server application</span>
+      <span class="tag tag-new">new</span>
+      <span class="change-files">app/encode_server.cpp</span>
+    </div>
+    <div class="change-body">
+      <div>
+        <div class="label">Why</div>
+        <div class="why">
+          The Phase 1 <code>stream_server</code> sends raw RGB pixels. Phase 2 needs a server that
+          encodes each captured frame to H.264 before transmission. A separate executable keeps
+          Phase 1 runnable and unmodified.
+        </div>
+      </div>
+      <div>
+        <div class="label">Notable Design Choices</div>
+        <div class="what">
+          <ul class="bullets">
+            <li><strong>vsync OFF</strong> — <code>glfwSwapInterval(0)</code>. With vsync ON,
+              <code>glfwSwapBuffers</code> blocks until the next display refresh (~16.7ms at 60Hz).
+              The capture+encode runs <em>before</em> the swap, so a slow encode eats into the
+              frame budget and causes missed vsyncs, dropping throughput to 5–6 FPS. Disabling
+              vsync lets the loop run as fast as the hardware allows; the target FPS is enforced
+              by a manual timer.</li>
+            <li><strong>Lazy encoder init</strong> — The encoder is initialized on the first
+              captured frame so it knows the actual framebuffer dimensions. This avoids a
+              race with the GLFW window not yet having a valid framebuffer at startup.</li>
+            <li><strong><code>glfwGetWindowSize</code> for logical size</strong> — On retina,
+              <code>glfwGetFramebufferSize</code> returns 2× physical pixels. The logical size
+              is what the encoder should target, since the client renders at logical resolution.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- N5: decode_client -->
+  <div class="change">
+    <div class="change-header">
+      <span class="change-id">N-05</span>
+      <span class="change-title">decode_client — Phase 2 client application</span>
+      <span class="tag tag-new">new</span>
+      <span class="change-files">app/decode_client.cpp</span>
+    </div>
+    <div class="change-body">
+      <div>
+        <div class="label">Why</div>
+        <div class="why">
+          The Phase 1 <code>stream_client</code> displays raw RGB textures directly. Phase 2 needs
+          a client that receives H.264 NAL bytes and decodes them before display. The decode hook
+          (<code>set_decode_fn</code>) inserted into <code>GlFrameTexture::update</code> keeps the
+          networking and display code identical to Phase 1.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- N6: launch script -->
+  <div class="change">
+    <div class="change-header">
+      <span class="change-id">N-06</span>
+      <span class="change-title">start_encode_stream.sh — launch both processes</span>
+      <span class="tag tag-new">new</span>
+      <span class="change-files">script/start_encode_stream.sh</span>
+    </div>
+    <div class="change-body">
+      <div>
+        <div class="label">Why</div>
+        <div class="why">
+          Running encode_server and decode_client manually in two terminals is tedious. The script
+          launches both from <code>build/Debug/</code> (so log files land in the right directory),
+          traps SIGINT/SIGTERM to kill both on Ctrl+C, and uses <code>wait -n</code> to exit when
+          either process finishes naturally.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     SECTION: Bug Fixes in Existing Code
+     ═══════════════════════════════════════════════ -->
+<div class="section">
+  <h2>Bug Fixes in Existing Code</h2>
+
+  <!-- F1: Frame::valid() -->
+  <div class="change">
+    <div class="change-header">
+      <span class="change-id">F-01</span>
+      <span class="change-title"><code>Frame::valid()</code> always returned false for H264 frames</span>
+      <span class="tag tag-fix">fix</span>
+      <span class="change-files">src/stream/frame_protocol.cpp</span>
+    </div>
+    <div class="change-body">
+      <div>
+        <div class="label">Bug</div>
+        <div class="bug">
+          <code>Frame::valid()</code> called <code>expected_size()</code>, which returns
+          <code>width × height × bytes_per_pixel</code>. For a compressed frame
+          (<code>compression != None</code>), there is no fixed expected size, so
+          <code>expected_size()</code> returned 0. <code>valid()</code> then required
+          <code>pixels.size() == 0</code>, which was never true for a real H264 frame, so
+          <strong>every H264 frame was rejected by the receive path</strong>.
+        </div>
+      </div>
+      <div>
+        <div class="label">Fix</div>
+        <pre class="diff"><span class="diff-add">+if (compression == Compression::H264)</span>
+<span class="diff-add">+    return !pixels.empty() && pixels.size() &lt;= max_frame_payload_size;</span>
+ const size_t expected = expected_size();
+ return expected > 0 &amp;&amp; expected &lt;= max_frame_payload_size &amp;&amp; pixels.size() == expected;</pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- F2: GlFrameCapture encode hook + FBO blit -->
+  <div class="change">
+    <div class="change-header">
+      <span class="change-id">F-02</span>
+      <span class="change-title">GlFrameCapture — encode hook + FBO blit for retina performance</span>
+      <span class="tag tag-perf">perf</span>
+      <span class="tag tag-new">new API</span>
+      <span class="change-files">include/stream/gl_frame_capture.hpp · src/stream/gl_frame_capture.cpp</span>
+    </div>
+    <div class="change-body">
+      <div>
+        <div class="label">Performance Problem</div>
+        <div class="bug">
+          On macOS Retina displays, <code>glfwGetFramebufferSize</code> returns 2× the logical
+          window size. A 1280×720 window has a 2560×1440 physical framebuffer. Before this fix,
+          <code>glReadPixels(0, 0, 2560, 1440)</code> transferred <strong>11.06 MB</strong> every
+          frame across the GPU-CPU bus — the single biggest bottleneck, limiting throughput to
+          ~5 FPS regardless of how fast the H.264 encoder was.
+        </div>
+      </div>
+      <div>
+        <div class="label">Fix — GPU-side blit before glReadPixels</div>
+        <div class="what">
+          <code>set_target_size(logicalW, logicalH)</code> tells the capture system the desired
+          output resolution. When the physical framebuffer is larger:
+          <ol style="padding-left:1.2rem; margin-top:0.4rem; font-size:0.85rem; line-height:1.7;">
+            <li>An internal FBO (<code>GL_FRAMEBUFFER</code> + renderbuffer at target size) is created lazily.</li>
+            <li><code>glBlitFramebuffer</code> downscales from the default framebuffer (2560×1440)
+              to the FBO (1280×720) entirely on the GPU — zero CPU cost.</li>
+            <li><code>glReadPixels</code> reads from the small FBO: <strong>2.76 MB</strong> instead of 11 MB.</li>
+          </ol>
+          This is a 4× reduction in GPU→CPU transfer, which proportionally removes the main
+          frame-rate bottleneck on retina hardware.
+        </div>
+      </div>
+      <div>
+        <div class="label">Encode hook</div>
+        <div class="what">
+          <code>set_encode_fn(std::function&lt;bool(Frame&amp;)&gt;)</code> registers a callback
+          that is called after <code>glReadPixels</code> but <em>before</em>
+          <code>frames_.deliver()</code>. The callback transforms the frame in-place
+          (RGB → H264 NAL bytes). The preview texture is uploaded to ImGui <em>before</em>
+          the encode callback runs, so the server's "Captured Preview" window always shows
+          the raw RGB image regardless of encoding.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- F3: GlFrameTexture decode hook -->
+  <div class="change">
+    <div class="change-header">
+      <span class="change-id">F-03</span>
+      <span class="change-title">GlFrameTexture — decode hook + <code>upload_rgb</code> refactor</span>
+      <span class="tag tag-new">new API</span>
+      <span class="change-files">include/stream/gl_frame_texture.hpp · src/stream/gl_frame_texture.cpp</span>
+    </div>
+    <div class="change-body">
+      <div>
+        <div class="label">Why</div>
+        <div class="why">
+          The original <code>GlFrameTexture::update()</code> only handled
+          <code>Compression::None</code> frames. H264 frames were silently dropped. A decode hook
+          keeps FFmpeg out of <code>stream_core</code> (which must remain FFmpeg-free) while
+          giving Phase 2 apps a clean integration point.
+        </div>
+      </div>
+      <div>
+        <div class="label">What Changed</div>
+        <div class="what">
+          <ul class="bullets">
+            <li>Added <code>set_decode_fn(std::function&lt;bool(const Frame&amp;, Frame&amp;)&gt;)</code>
+              — callback receives the H264 frame and writes decoded RGB into an output frame.</li>
+            <li>Extracted <code>upload_rgb(const Frame&amp;)</code> private helper — uses
+              <code>glTexSubImage2D</code> when the resolution hasn't changed (avoids GPU texture
+              reallocation every frame) and <code>glTexImage2D</code> only on first use or
+              resolution change.</li>
+            <li><code>update()</code> now dispatches: H264 frame → <code>decode_fn_</code> →
+              <code>upload_rgb</code>; raw RGB frame → <code>upload_rgb</code> directly.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- F4: log flush_on -->
+  <div class="change">
+    <div class="change-header">
+      <span class="change-id">F-04</span>
+      <span class="change-title"><code>Log::get()</code> — flush on every write to prevent log loss on SIGTERM</span>
+      <span class="tag tag-fix">fix</span>
+      <span class="tag tag-logging">logging</span>
+      <span class="change-files">include/mylib/log.hpp</span>
+    </div>
+    <div class="change-body">
+      <div>
+        <div class="label">Bug</div>
+        <div class="bug">
+          <code>spdlog::basic_file_sink_mt</code> uses buffered I/O internally. The
+          <code>start_encode_stream.sh</code> script kills <code>encode_server</code> with SIGTERM
+          when either process exits. SIGTERM's default handler calls <code>_exit()</code>, which
+          does <strong>not</strong> flush C++ stream buffers or run destructors. Result:
+          <code>encode_server.log</code> was always empty. The decode_client exited naturally (user
+          closed window), allowing its destructor to flush, so <code>decode_client.log</code> had
+          content.
+        </div>
+      </div>
+      <div>
+        <div class="label">Fix</div>
+        <pre class="diff"><span class="diff-ctx"> auto logger = std::make_shared&lt;spdlog::logger&gt;(name, sinks.begin(), sinks.end());
+ logger->set_level(inst.m_level);</span>
+<span class="diff-add">+logger->flush_on(spdlog::level::trace); // write-through so SIGTERM doesn't lose messages</span>
+<span class="diff-ctx"> inst.m_loggers[name] = logger;</span></pre>
+        <div class="impact" style="margin-top:0.6rem;">
+          <code>flush_on(trace)</code> tells spdlog to call <code>fflush()</code> on the underlying
+          file after every single log message. This is a write-through mode: each message is on disk
+          immediately, so a sudden process kill cannot lose recent log entries. The performance cost
+          is negligible for a debug/development tool that logs at human-readable rates.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     SECTION: Known Behaviors (not bugs)
+     ═══════════════════════════════════════════════ -->
+<div class="section">
+  <h2>Known Behaviors (Not Bugs)</h2>
+  <div class="change">
+    <div class="change-body">
+      <table>
+        <thead>
+          <tr>
+            <th>Observation</th>
+            <th>Explanation</th>
+            <th>Severity</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>[ffmpeg] [error] non-existing PPS 0 referenced</code> (2–3× at stream start)</td>
+            <td>
+              When the client connects, it may land mid-GOP and receive P-frames before the next
+              IDR. With <code>gop_size = fps/2</code>, the next IDR arrives within 0.5 s and
+              decoding recovers automatically. This is inherent to any live streaming protocol —
+              the first viewer always misses some frames.
+            </td>
+            <td style="color:#86efac;">Cosmetic — self-resolving</td>
+          </tr>
+          <tr>
+            <td><code>[swscaler] No accelerated colorspace conversion found from yuv420p to rgb24</code></td>
+            <td>
+              The Conan-built FFmpeg on ARM64 (Apple Silicon) has no NEON-vectorized YUV420P→RGB24
+              path. It falls back to a scalar loop. This appears once per stream when the
+              <code>SwsContext</code> is first created. No functional impact; performance impact is
+              minimal for this one-shot conversion.
+            </td>
+            <td style="color:#86efac;">Informational only</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     SECTION: Summary
+     ═══════════════════════════════════════════════ -->
+<div class="section">
+  <h2>Summary of Issues Resolved</h2>
+  <div class="change">
+    <div class="change-body">
+      <table>
+        <thead>
+          <tr><th>#</th><th>Issue</th><th>Root Cause</th><th>Fix</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>1</td>
+            <td>Server runs at 5–6 FPS instead of 30 FPS</td>
+            <td>vsync ON blocked render thread; retina glReadPixels read 11MB/frame</td>
+            <td>vsync=false + FBO blit downscale before glReadPixels</td>
+          </tr>
+          <tr>
+            <td>2</td>
+            <td><code>non-existing PPS 0 referenced</code> on every frame</td>
+            <td><code>intra-refresh=1</code> eliminated all IDR frames after the first; mid-stream clients never receive SPS/PPS</td>
+            <td>Removed <code>intra-refresh</code>; added <code>repeat_headers=1</code>; set <code>gop_size=fps/2</code></td>
+          </tr>
+          <tr>
+            <td>3</td>
+            <td><code>too many slices (42 &gt;= 32)</code> decoder warnings</td>
+            <td><code>slice-max-size=1500</code> is a UDP/MTU hint; on TCP it splits frames into 40–70 slices exceeding <code>MAX_SLICES=32</code></td>
+            <td>Removed <code>slice-max-size</code> from x264-params</td>
+          </tr>
+          <tr>
+            <td>4</td>
+            <td><code>encode_server.log</code> always empty</td>
+            <td>spdlog buffers unflushed when process receives SIGTERM</td>
+            <td><code>logger-&gt;flush_on(trace)</code> — write-through mode</td>
+          </tr>
+          <tr>
+            <td>5</td>
+            <td>FFmpeg error messages only in terminal, not in log files</td>
+            <td><code>av_log</code> writes to <code>stderr</code> directly, bypassing spdlog</td>
+            <td><code>install_ffmpeg_log_bridge()</code> — custom <code>av_log_set_callback</code></td>
+          </tr>
+          <tr>
+            <td>6</td>
+            <td>H264 frames silently dropped by receive path</td>
+            <td><code>Frame::valid()</code> called <code>expected_size()</code> which returns 0 for compressed frames</td>
+            <td>Early-return in <code>valid()</code> for H264: check non-empty and within max payload</td>
+          </tr>
+          <tr>
+            <td>7</td>
+            <td>Decoder <code>non-existing PPS</code> on every frame (not just startup)</td>
+            <td><code>AVCodecParserContext</code> re-parsed already-framed NAL blobs, confusing its state machine</td>
+            <td>Removed parser; feed blob directly to <code>avcodec_send_packet</code></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<p style="text-align:center; color:#444; font-size:0.75rem; margin-top:2rem;">
+  Generated 2026-05-25 · develop_stream branch · Phase 2 complete
+</p>
+
+</body>
+</html>

@@ -2,6 +2,7 @@
 
 #include <chrono>
 #include <cstdint>
+#include <deque>
 #include <string>
 
 namespace stream
@@ -24,19 +25,22 @@ struct ClientStats
     std::string status          = "Disconnected";
 };
 
+// Sliding-window FPS counter: reports frames / elapsed over the last `window`
+// seconds. Accurate from the second frame onward; no warm-up lag.
 class FpsCounter
 {
 public:
-    explicit FpsCounter(float alpha = 0.1f);
+    explicit FpsCounter(float window_seconds = 1.0f);
     float tick();
     float value() const;
 
 private:
-    using clock = std::chrono::steady_clock;
+    using clock      = std::chrono::steady_clock;
+    using time_point = clock::time_point;
 
-    float             alpha_ = 0.1f;
-    float             fps_   = 0.0f;
-    clock::time_point last_  = clock::now();
+    float                  m_window;
+    float                  m_fps = 0.0f;
+    std::deque<time_point> m_stamps;
 };
 
 } // namespace stream

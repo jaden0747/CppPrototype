@@ -11,8 +11,8 @@ namespace stream
 {
 
 StreamClientEndpoint::StreamClientEndpoint(dc::SenderPort<Frame>& frames, dc::SenderPort<ClientStats>& stats)
-    : frames_(frames)
-    , stats_(stats)
+    : m_frames(frames)
+    , m_stats(stats)
 {
 }
 
@@ -23,70 +23,70 @@ StreamClientEndpoint::~StreamClientEndpoint()
 
 void StreamClientEndpoint::start()
 {
-    if (running_.exchange(true))
+    if (m_running.exchange(true))
         return;
-    thread_ = std::thread(&StreamClientEndpoint::run, this);
+    m_thread = std::thread(&StreamClientEndpoint::run, this);
 }
 
 void StreamClientEndpoint::stop()
 {
-    if (!running_.exchange(false))
+    if (!m_running.exchange(false))
         return;
 
-    connected_requested_.store(false);
+    m_connected_requested.store(false);
     close_current_connection();
-    request_cv_.notify_all();
+    m_request_cv.notify_all();
 
-    if (thread_.joinable())
-        thread_.join();
+    if (m_thread.joinable())
+        m_thread.join();
 }
 
 void StreamClientEndpoint::connect(ClientEndpointConfig config)
 {
     {
-        std::lock_guard<std::mutex> lock(request_mutex_);
-        config_ = std::move(config);
-        connected_requested_.store(true);
+        std::lock_guard<std::mutex> lock(m_request_mutex);
+        m_config = std::move(config);
+        m_connected_requested.store(true);
     }
-    request_cv_.notify_all();
+    m_request_cv.notify_all();
 }
 
 void StreamClientEndpoint::disconnect()
 {
-    connected_requested_.store(false);
+    m_connected_requested.store(false);
     close_current_connection();
-    request_cv_.notify_all();
+    m_request_cv.notify_all();
 }
 
 void StreamClientEndpoint::deliver_stats(const ClientStats& stats)
 {
-    ClientStats* slot = stats_.reserve();
+    ClientStats* slot = m_stats.reserve();
     if (!slot)
         return;
     *slot = stats;
-    stats_.deliver();
+    m_stats.deliver();
 }
 
 void StreamClientEndpoint::close_current_connection()
 {
-    std::lock_guard<std::mutex> lock(state_mutex_);
-    if (connection_)
-        connection_->close();
+    std::lock_guard<std::mutex> lock(m_state_mutex);
+    if (m_connection)
+        m_connection->close();
 }
 
 void StreamClientEndpoint::run()
 {
     auto log = Log::get("net");
 
-    while (running_)
+    while (m_running)
     {
         ClientEndpointConfig config;
         {
-            std::unique_lock<std::mutex> lock(request_mutex_);
-            request_cv_.wait(lock, [&] { return !running_ || connected_requested_.load(); });
-            if (!running_)
+            std::unique_lock<std::mutex> lock(m_request_mutex);
+            m_request_cv.wait(lock, [&] { return !m_running || m_connected_requested.load(); });
+            if (!m_running)
                 break;
-            config = config_;
+            config = m_config;
         }
 
         log->info("Connecting to {}:{}...", config.server_ip, config.server_port);
@@ -99,14 +99,14 @@ void StreamClientEndpoint::run()
         {
             log->warn("Connection refused to {}:{}", config.server_ip, config.server_port);
             deliver_stats(ClientStats{0, 0, 0.0f, false, "Connection refused"});
-            connected_requested_.store(false);
+            m_connected_requested.store(false);
             continue;
         }
 
         TcpConnection conn = std::move(*maybe_conn);
         {
-            std::lock_guard<std::mutex> lock(state_mutex_);
-            connection_ = &conn;
+            std::lock_guard<std::mutex> lock(m_state_mutex);
+            m_connection = &conn;
         }
 
         log->info("Connected to {}:{}", config.server_ip, config.server_port);
@@ -115,8 +115,8 @@ void StreamClientEndpoint::run()
         snapshot.status    = "Connected";
         deliver_stats(snapshot);
 
-        FpsCounter fps(0.1f);
-        while (running_ && connected_requested_.load() && conn.is_open())
+        FpsCounter fps(1.0f);
+        while (m_running && m_connected_requested.load() && conn.is_open())
         {
             auto header = read_frame_header(conn);
             if (!header)
@@ -125,7 +125,7 @@ void StreamClientEndpoint::run()
                 break;
             }
 
-            Frame* slot = frames_.reserve();
+            Frame* slot = m_frames.reserve();
             if (slot)
             {
                 if (!read_frame_payload(conn, *header, *slot))
@@ -133,7 +133,7 @@ void StreamClientEndpoint::run()
                     log->warn("recv pixels failed; server disconnected");
                     break;
                 }
-                frames_.deliver();
+                m_frames.deliver();
             }
             else
             {
@@ -158,13 +158,13 @@ void StreamClientEndpoint::run()
 
         conn.close();
         {
-            std::lock_guard<std::mutex> lock(state_mutex_);
-            if (connection_ == &conn)
-                connection_ = nullptr;
+            std::lock_guard<std::mutex> lock(m_state_mutex);
+            if (m_connection == &conn)
+                m_connection = nullptr;
         }
 
         log->info("Disconnected from {}:{}", config.server_ip, config.server_port);
-        connected_requested_.store(false);
+        m_connected_requested.store(false);
         deliver_stats(ClientStats{0, 0, 0.0f, false, "Disconnected"});
     }
 
