@@ -294,6 +294,69 @@ if(APPLE)
 endif()
 
 # ---------------------------------------------------------------------------
+# Control channel library — Phase 4: RTSP-like session negotiation
+# Depends on stream_core (TcpSocket, Log) + nlohmann_json for serialization.
+# ---------------------------------------------------------------------------
+add_library(stream_control
+    src/stream/control_server.cpp
+    src/stream/control_client.cpp
+)
+target_include_directories(stream_control PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+target_link_libraries(stream_control PUBLIC
+    stream_core
+    nlohmann_json::nlohmann_json
+    Threads::Threads
+)
+
+# ---------------------------------------------------------------------------
+# RTSP server — Phase 4: Control channel + H.264 + UDP/FEC sender
+# ---------------------------------------------------------------------------
+add_executable(rtsp_server app/rtsp_server.cpp)
+target_include_directories(rtsp_server PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+target_link_libraries(rtsp_server PRIVATE
+    stream_control
+    stream_udp
+    stream_h264
+    stream_core
+    imgui
+    glfw
+    OpenGL::GL
+    Threads::Threads
+    nlohmann_json::nlohmann_json
+    spdlog::spdlog_header_only
+)
+if(APPLE)
+    target_compile_definitions(rtsp_server PRIVATE GL_SILENCE_DEPRECATION)
+endif()
+
+# ---------------------------------------------------------------------------
+# RTSP client — Phase 4: Control negotiation + UDP/FEC receiver + H.264 decode
+# ---------------------------------------------------------------------------
+add_executable(rtsp_client app/rtsp_client.cpp)
+target_include_directories(rtsp_client PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+target_link_libraries(rtsp_client PRIVATE
+    stream_control
+    stream_udp
+    stream_h264
+    stream_core
+    imgui
+    glfw
+    OpenGL::GL
+    Threads::Threads
+    nlohmann_json::nlohmann_json
+    spdlog::spdlog_header_only
+)
+if(APPLE)
+    target_compile_definitions(rtsp_client PRIVATE GL_SILENCE_DEPRECATION)
+endif()
+
+# ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
 enable_testing()
@@ -303,6 +366,7 @@ add_executable(tests
     test/test_settings.cpp
     test/test_log.cpp
     test/test_stream_protocol.cpp
+    test/test_control_protocol.cpp
 )
 target_include_directories(tests PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
