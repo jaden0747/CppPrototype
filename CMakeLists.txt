@@ -357,6 +357,24 @@ if(APPLE)
 endif()
 
 # ---------------------------------------------------------------------------
+# Input handling library — Phase 5: Reverse channel for keyboard/mouse events
+# Depends on stream_core (UdpSocket, Log) + nlohmann_json for serialization.
+# ---------------------------------------------------------------------------
+add_library(stream_input
+    src/stream/input_sender.cpp
+    src/stream/input_receiver.cpp
+)
+target_include_directories(stream_input PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+target_link_libraries(stream_input PUBLIC
+    stream_udp
+    stream_core
+    nlohmann_json::nlohmann_json
+    Threads::Threads
+)
+
+# ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
 enable_testing()
@@ -367,6 +385,7 @@ add_executable(tests
     test/test_log.cpp
     test/test_stream_protocol.cpp
     test/test_control_protocol.cpp
+    test/test_input_protocol.cpp
 )
 target_include_directories(tests PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
