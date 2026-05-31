@@ -1,0 +1,20 @@
+# Windows base profile: VS 2025 Community MSVC 19.5x + Ninja.
+#
+# This profile is platform/toolchain only — it does NOT set
+# `build_type` or `compiler.runtime_type`. Use one of:
+#
+#   conan/profiles/windows-msvc-debug    # build_type=Debug,   runtime_type=Debug   (MDd)
+#   conan/profiles/windows-msvc-release  # build_type=Release, runtime_type=Release (MD)
+
+[settings]
+os=Windows
+arch=x86_64
+compiler=msvc
+compiler.version=195
+compiler.cppstd=17
+compiler.runtime=dynamic
+
+[conf]
+tools.cmake.cmaketoolchain:generator=Ninja
+tools.microsoft.msbuild:vs_version=18
+tools.microsoft.msbuild:installation_path=C:\Program Files\Microsoft Visual Studio\18\Community

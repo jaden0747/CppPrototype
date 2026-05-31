@@ -1,0 +1,7 @@
+# Windows Release profile — inherits toolchain from `windows` and selects Debug build
+include(windows)
+
+[settings]
+build_type=Release
+compiler.runtime_type=Release
+

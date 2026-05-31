@@ -38,7 +38,7 @@ target_compile_definitions(imgui PRIVATE IMGUI_IMPL_OPENGL_LOADER_CUSTOM)
 # Force-include glad/glad.h into imgui_impl_opengl3.cpp so its GL calls resolve through glad.
 if(MSVC)
     set_source_files_properties(${IMGUI_DIR}/backends/imgui_impl_opengl3.cpp
-        PROPERTIES COMPILE_OPTIONS "/FI glad/glad.h")
+        PROPERTIES COMPILE_OPTIONS "/FIglad/glad.h")
 else()
     set_source_files_properties(${IMGUI_DIR}/backends/imgui_impl_opengl3.cpp
         PROPERTIES COMPILE_OPTIONS "-include;glad/glad.h")
@@ -167,6 +167,28 @@ if(APPLE)
 endif()
 
 # ---------------------------------------------------------------------------
+# UDP transport library — Phase 3: UDP socket, FEC packetizer/reassembler
+# Depends on stream_core (Frame, stats, log) but not on FFmpeg directly.
+# ---------------------------------------------------------------------------
+add_library(stream_udp
+    src/stream/udp_socket.cpp
+    src/stream/udp_server_endpoint.cpp
+    src/stream/udp_client_endpoint.cpp
+)
+target_include_directories(stream_udp PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+target_compile_definitions(stream_udp PUBLIC ASIO_STANDALONE)
+target_link_libraries(stream_udp PUBLIC
+    stream_core
+    asio::asio
+    Threads::Threads
+)
+if(WIN32)
+    target_link_libraries(stream_udp PUBLIC ws2_32 mswsock)
+endif()
+
+# ---------------------------------------------------------------------------
 # H.264 codec library — Phase 2: encoder + decoder (requires FFmpeg/libx264)
 # Kept separate from stream_core so Phase 1 apps remain FFmpeg-free.
 # ---------------------------------------------------------------------------
@@ -225,6 +247,50 @@ target_link_libraries(decode_client PRIVATE
 )
 if(APPLE)
     target_compile_definitions(decode_client PRIVATE GL_SILENCE_DEPRECATION)
+endif()
+
+# ---------------------------------------------------------------------------
+# UDP server — Phase 3: H.264-encoded GL capture + UDP/FEC sender
+# ---------------------------------------------------------------------------
+add_executable(udp_server app/udp_server.cpp)
+target_include_directories(udp_server PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+target_link_libraries(udp_server PRIVATE
+    stream_udp
+    stream_h264
+    stream_core
+    imgui
+    glfw
+    OpenGL::GL
+    Threads::Threads
+    nlohmann_json::nlohmann_json
+    spdlog::spdlog_header_only
+)
+if(APPLE)
+    target_compile_definitions(udp_server PRIVATE GL_SILENCE_DEPRECATION)
+endif()
+
+# ---------------------------------------------------------------------------
+# UDP client — Phase 3: UDP/FEC receiver + H.264 decode + ImGui display
+# ---------------------------------------------------------------------------
+add_executable(udp_client app/udp_client.cpp)
+target_include_directories(udp_client PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+target_link_libraries(udp_client PRIVATE
+    stream_udp
+    stream_h264
+    stream_core
+    imgui
+    glfw
+    OpenGL::GL
+    Threads::Threads
+    nlohmann_json::nlohmann_json
+    spdlog::spdlog_header_only
+)
+if(APPLE)
+    target_compile_definitions(udp_client PRIVATE GL_SILENCE_DEPRECATION)
 endif()
 
 # ---------------------------------------------------------------------------
